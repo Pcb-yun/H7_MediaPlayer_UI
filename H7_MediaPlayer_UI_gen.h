@@ -83,7 +83,8 @@ bool H7_MediaPlayer_UI_check_target(uint32_t target);
  * Images
  *----------------*/
 
-
+/* Targets: any */
+extern const void * ahq;
 
 /*----------------
  * Subjects

@@ -56,6 +56,7 @@ lv_obj_t * home_create(void)
         lv_style_set_pad_all(&style_box, 10);
         lv_style_set_radius(&style_box, 10);
         lv_style_set_bg_color(&style_box, lv_color_hex(0xf1f5f9));
+        lv_style_set_bg_opa(&style_box, (255 * 50 / 100));
         lv_style_set_border_width(&style_box, 2);
         lv_style_set_border_color(&style_box, lv_color_hex(0x3b82f6));
         lv_style_set_radius(&style_dot, 4);
@@ -80,23 +81,30 @@ lv_obj_t * home_create(void)
         lv_obj_set_style_pad_row(lv_obj_0, 10, 0);
         lv_obj_set_style_bg_color(lv_obj_0, lv_color_hex(0xffffff), 0);
         lv_obj_set_style_bg_opa(lv_obj_0, (255 * 100 / 100), 0);
+        lv_obj_set_style_bg_image_src(lv_obj_0, ahq, 0);
+        lv_obj_set_style_bg_image_tiled(lv_obj_0, false, 0);
 
         lv_obj_t * lv_obj_1 = lv_obj_create(lv_obj_0);
         lv_obj_add_style(lv_obj_1, &style_box, 0);
         lv_obj_t * lv_label_0 = lv_label_create(lv_obj_1);
         lv_label_set_text(lv_label_0, "H7_MediaPlayer");
+        lv_obj_set_width(lv_label_0, lv_pct(100));
+        lv_obj_set_style_text_align(lv_label_0, LV_TEXT_ALIGN_CENTER, 0);
         lv_obj_set_style_text_color(lv_label_0, lv_color_hex(0x000000), 0);
 
         lv_obj_t * lv_obj_2 = lv_obj_create(lv_obj_0);
         lv_obj_add_style(lv_obj_2, &style_box, 0);
         lv_obj_t * lv_label_1 = lv_label_create(lv_obj_2);
         lv_label_set_text(lv_label_1, "Hello LVGL editor");
+        lv_obj_set_width(lv_label_1, lv_pct(100));
+        lv_obj_set_style_text_align(lv_label_1, LV_TEXT_ALIGN_CENTER, 0);
         lv_obj_set_style_text_color(lv_label_1, lv_color_hex(0x0000ff), 0);
 
         lv_obj_t * lv_obj_3 = lv_obj_create(lv_obj_0);
         lv_obj_set_flex_grow(lv_obj_3, 1);
         lv_obj_set_width(lv_obj_3, lv_pct(100));
         lv_obj_set_style_bg_opa(lv_obj_3, 0, 0);
+        lv_obj_set_style_bg_image_tiled(lv_obj_3, false, 0);
         lv_obj_t * dot_0 = lv_obj_create(lv_obj_3);
         lv_obj_set_name(dot_0, "dot_0");
         lv_obj_set_width(dot_0, 64);

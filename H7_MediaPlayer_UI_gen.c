@@ -63,7 +63,9 @@ static uint32_t H7_MediaPlayer_UI_target = H7_MEDIAPLAYER_UI_TARGET_ALL;
  * Images
  *----------------*/
 
-
+/* Targets: any */
+const void * ahq = NULL;
+extern const void * ahq_data;
 
 /*----------------
  * Global styles
@@ -106,7 +108,15 @@ void H7_MediaPlayer_UI_init_gen(const char * asset_path)
      * Images
      *----------------*/
 
-
+    /* Targets: any */
+    #if H7_MEDIAPLAYER_UI_CHECK_COMPILE_TARGET(H7_MEDIAPLAYER_UI_TARGET_ALL)
+    if (H7_MediaPlayer_UI_check_target(H7_MEDIAPLAYER_UI_TARGET_ALL)) {
+        /* ahq */
+        if (!ahq) {
+            ahq = &ahq_data;
+        }
+    }
+    #endif
 
     /*----------------
      * Global styles
@@ -139,6 +149,7 @@ void H7_MediaPlayer_UI_init_gen(const char * asset_path)
      * While running in the editor skip this step to update the preview when the XML changes */
 #if defined(LV_USE_XML) && LV_USE_XML && !defined(LV_EDITOR_PREVIEW)
     /* Register images */
+    lv_xml_register_image(NULL, "ahq", ahq);
 #endif
 
 #if !defined(LV_USE_XML) || LV_USE_XML == 0
