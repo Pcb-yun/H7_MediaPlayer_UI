@@ -1,7 +1,0 @@
-list(
-  APPEND
-  LV_EDITOR_PROJECT_SOURCES
-  ${CMAKE_CURRENT_LIST_DIR}/H7_MediaPlayer_UI_gen.c
-  ${CMAKE_CURRENT_LIST_DIR}/H7_MediaPlayer_UI.c
-  ${CMAKE_CURRENT_LIST_DIR}/images/ahq_data.c
-  ${CMAKE_CURRENT_LIST_DIR}/screens/home_gen.c)

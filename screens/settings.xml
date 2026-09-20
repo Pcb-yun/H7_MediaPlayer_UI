@@ -1,0 +1,74 @@
+<!-- settings.xml - 设置应用主列表。视觉结构全部由 XML 管理，业务动作由 C 侧后续接入。 -->
+<screen>
+	<view style_pad_all="0" style_bg_color="0x080808" style_bg_opa="100%">
+		<lv_obj
+			name="settings_header"
+			x="0" y="0" width="100%" height="34"
+			style_pad_all="0"
+			style_bg_color="0x101010"
+			style_bg_opa="100%"
+			style_border_width="0"
+		>
+			<lv_label text="设置" align="center" style_text_font="cjk_sc_14" style_text_color="0xffffff" />
+		</lv_obj>
+
+		<lv_obj
+			name="settings_list"
+			x="0" y="34" width="100%" height="206"
+			flex_flow="column"
+			style_pad_left="8"
+			style_pad_right="8"
+			style_pad_top="5"
+			style_pad_bottom="8"
+			style_pad_row="4"
+			style_bg_opa="0"
+			style_border_width="0"
+		>
+			<lv_label text="显示" width="100%" height="18" style_text_font="cjk_sc_14" style_text_color="0x9ca3af" />
+
+			<lv_button name="settings_brightness" width="100%" height="44">
+				<style name="style_settings_row" />
+				<style name="style_settings_row_focused" selector="focused" />
+				<lv_image src="setting_brightness" width="26" height="26" inner_align="contain" align="left_mid" />
+				<lv_label text="亮度" x="38" align="left_mid" style_text_font="cjk_sc_14" style_text_color="0xffffff" />
+				<lv_label name="settings_brightness_value" text="50%  ›" align="right_mid" style_text_font="cjk_sc_14" style_text_color="0xbfc1c7" />
+			</lv_button>
+
+			<lv_button name="settings_orientation" width="100%" height="44">
+				<style name="style_settings_row" />
+				<style name="style_settings_row_focused" selector="focused" />
+				<lv_image src="setting_orientation" width="26" height="26" inner_align="contain" align="left_mid" />
+				<lv_label text="方向" x="38" align="left_mid" style_text_font="cjk_sc_14" style_text_color="0xffffff" />
+				<lv_label name="settings_orientation_value" text="0°  ›" align="right_mid" style_text_font="cjk_sc_14" style_text_color="0xbfc1c7" />
+			</lv_button>
+
+			<lv_label text="系统" width="100%" height="18" style_text_font="cjk_sc_14" style_text_color="0x9ca3af" />
+
+			<lv_button name="settings_reboot" width="100%" height="44">
+				<style name="style_settings_row" />
+				<style name="style_settings_row_focused" selector="focused" />
+				<lv_image src="setting_reboot" width="26" height="26" inner_align="contain" align="left_mid" />
+				<lv_label text="重启" x="38" align="left_mid" style_text_font="cjk_sc_14" style_text_color="0xffffff" />
+				<lv_label text="›" align="right_mid" style_text_font="cjk_sc_14" style_text_color="0xbfc1c7" />
+			</lv_button>
+
+			<lv_button name="settings_local_update" width="100%" height="44">
+				<style name="style_settings_row" />
+				<style name="style_settings_row_focused" selector="focused" />
+				<lv_image src="setting_local_update" width="26" height="26" inner_align="contain" align="left_mid" />
+				<lv_label text="本地更新" x="38" align="left_mid" style_text_font="cjk_sc_14" style_text_color="0xffffff" />
+				<lv_label text="›" align="right_mid" style_text_font="cjk_sc_14" style_text_color="0xbfc1c7" />
+			</lv_button>
+
+			<lv_label text="关于" width="100%" height="18" style_text_font="cjk_sc_14" style_text_color="0x9ca3af" />
+
+			<lv_button name="settings_about" width="100%" height="44">
+				<style name="style_settings_row" />
+				<style name="style_settings_row_focused" selector="focused" />
+				<lv_image src="setting_about" width="26" height="26" inner_align="contain" align="left_mid" />
+				<lv_label text="关于本机" x="38" align="left_mid" style_text_font="cjk_sc_14" style_text_color="0xffffff" />
+				<lv_label text="›" align="right_mid" style_text_font="cjk_sc_14" style_text_color="0xbfc1c7" />
+			</lv_button>
+		</lv_obj>
+	</view>
+</screen>

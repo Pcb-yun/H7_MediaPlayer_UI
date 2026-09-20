@@ -1,0 +1,108 @@
+<!-- about.xml - 固定标题栏 + 可滚动信息列表。每个信息栏均可由旋钮独立聚焦。 -->
+<screen>
+	<view style_pad_all="0" style_bg_color="0x080808" style_bg_opa="100%">
+		<lv_obj
+			name="about_header"
+			x="0" y="0" width="100%" height="34"
+			style_pad_all="0"
+			style_bg_color="0x101010"
+			style_bg_opa="100%"
+			style_border_width="0"
+		>
+			<lv_label text="关于" align="center" style_text_font="cjk_sc_14" style_text_color="0xffffff" />
+		</lv_obj>
+
+		<!-- 新信息只需继续追加 lv_button。焦点移动时 LVGL 会让对应项滚入可视区域。 -->
+		<lv_obj
+			name="about_list"
+			x="0" y="34" width="100%" height="206"
+			flex_flow="column"
+			style_pad_left="8"
+			style_pad_right="8"
+			style_pad_top="6"
+			style_pad_bottom="10"
+			style_pad_row="6"
+			style_bg_opa="0"
+			style_border_width="0"
+		>
+			<lv_button
+				name="about_intro"
+				width="100%" height="content"
+				flex_flow="row"
+				style_flex_cross_place="center"
+				style_pad_all="10"
+				style_pad_column="10"
+			>
+				<style name="style_settings_row" />
+				<style name="style_settings_row_focused" selector="focused" />
+				<lv_image src="app_settings" width="38" height="38" inner_align="contain" />
+				<lv_label
+					width="148" height="content"
+					text="H7 MediaPlayer\n基于 STM32H7 的多媒体项目"
+					long_mode="wrap"
+					style_text_font="cjk_sc_14"
+					style_text_color="0xf3f4f6"
+				/>
+			</lv_button>
+
+			<lv_button
+				name="about_repository"
+				width="100%" height="content"
+				flex_flow="column"
+				style_pad_all="10"
+				style_pad_row="5"
+			>
+				<style name="style_settings_row" />
+				<style name="style_settings_row_focused" selector="focused" />
+				<lv_label width="100%" height="content" text="仓库" style_text_font="cjk_sc_14" style_text_color="0x9ca3af" />
+				<lv_label
+					width="100%" height="content"
+					text="github.com/Pcb-yun/H7_MediaPlayer_Apps"
+					long_mode="wrap"
+					style_text_font="montserrat_10"
+					style_text_color="0xffa8cf"
+				/>
+			</lv_button>
+
+			<lv_button
+				name="about_version_row"
+				width="100%" height="content"
+				flex_flow="column"
+				style_pad_all="10"
+				style_pad_row="5"
+			>
+				<style name="style_settings_row" />
+				<style name="style_settings_row_focused" selector="focused" />
+				<lv_label width="100%" height="content" text="固件版本" style_text_font="cjk_sc_14" style_text_color="0x9ca3af" />
+				<lv_label
+					name="about_firmware_version"
+					width="100%" height="content"
+					text="v0.1.0"
+					long_mode="wrap"
+					style_text_font="montserrat_10"
+					style_text_color="0xffffff"
+				/>
+			</lv_button>
+
+			<lv_button
+				name="about_build_row"
+				width="100%" height="content"
+				flex_flow="column"
+				style_pad_all="10"
+				style_pad_row="5"
+			>
+				<style name="style_settings_row" />
+				<style name="style_settings_row_focused" selector="focused" />
+				<lv_label width="100%" height="content" text="编译时间" style_text_font="cjk_sc_14" style_text_color="0x9ca3af" />
+				<lv_label
+					name="about_build_time"
+					width="100%" height="content"
+					text="MMM DD YYYY HH:MM:SS"
+					long_mode="wrap"
+					style_text_font="montserrat_10"
+					style_text_color="0xffffff"
+				/>
+			</lv_button>
+		</lv_obj>
+	</view>
+</screen>

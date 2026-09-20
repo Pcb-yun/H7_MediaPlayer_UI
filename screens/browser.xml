@@ -1,0 +1,88 @@
+<!-- browser.xml - 黑色列表式文件浏览器。目录内容由 C 动态填充，菜单结构由 XML 管理。 -->
+<screen>
+	<view style_pad_all="8" style_bg_color="0x1c1c1c" style_bg_opa="100%">
+		<lv_obj
+			name="browser_panel"
+			align="center"
+			width="100%"
+			height="100%"
+			flex_flow="column"
+			style_pad_all="4"
+			style_pad_row="4"
+			style_bg_color="0x1c1c1c"
+			style_bg_opa="100%"
+			style_border_width="0"
+		>
+			<lv_label
+				name="browser_path"
+				width="100%"
+				text="C:/"
+				style_text_font="cjk_sc_14"
+				style_text_color="0xa7f3d0"
+			/>
+			<lv_obj
+				name="browser_list"
+				width="100%"
+				flex_grow="1"
+				flex_flow="column"
+				style_pad_all="0"
+				style_pad_row="1"
+				style_bg_opa="0"
+				style_border_width="0"
+			/>
+		</lv_obj>
+
+		<!-- 文件双击后显示的上下文菜单。现阶段只有删除操作，长按关闭菜单。
+		     菜单打开期间 C 侧会把背景列表行移出焦点组，旋钮只在本菜单内遍历。 -->
+		<lv_obj
+			name="browser_menu_overlay"
+			hidden="true"
+			width="100%"
+			height="100%"
+			style_pad_all="0"
+			style_bg_color="0x000000"
+			style_bg_opa="65%"
+			style_border_width="0"
+		>
+			<lv_obj
+				align="center"
+				width="170"
+				height="94"
+				flex_flow="column"
+				style_flex_main_place="center"
+				style_flex_cross_place="center"
+				style_pad_all="8"
+				style_pad_row="8"
+				style_radius="10"
+				style_bg_color="0x151515"
+				style_bg_opa="100%"
+				style_border_width="1"
+				style_border_color="0x525252"
+			>
+				<lv_label
+					name="browser_menu_name"
+					text="文件"
+					width="100%"
+					long_mode="dots"
+					style_text_align="center"
+					style_text_font="cjk_sc_14"
+					style_text_color="0xe5e5e5"
+				/>
+				<lv_button
+					name="browser_menu_delete"
+					width="100%"
+					height="36"
+					style_radius="7"
+					style_bg_color="0x991b1b"
+					style_bg_opa="100%"
+					style_border_width="2"
+					style_border_color="0xfca5a5"
+					style_border_opa="0"
+					style_border_opa-focused="100%"
+				>
+					<lv_label text="删除" align="center" style_text_font="cjk_sc_14" style_text_color="0xffffff" />
+				</lv_button>
+			</lv_obj>
+		</lv_obj>
+	</view>
+</screen>

@@ -43,9 +43,12 @@ LV_TINY_TTF_FILE_SUPPORT 1
 LV_USE_QRCODE           1
 
 # A handful of built-in fonts.
-LV_FONT_MONTSERRAT_14   1
+LV_FONT_MONTSERRAT_12   1
 LV_FONT_MONTSERRAT_16   1
 LV_FONT_MONTSERRAT_24   1
+
+# 默认字体必须与固件 lv_conf.h 的 LV_FONT_DEFAULT 一致，否则模拟器与设备字号不同
+LV_FONT_DEFAULT         LV_FONT_DEFAULT_MONTSERRAT_12
 
 # Show the FPS / CPU overlay. Set to 1 to enable.
 LV_USE_PERF_MONITOR     0

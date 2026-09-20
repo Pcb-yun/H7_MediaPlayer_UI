@@ -24,8 +24,14 @@ int main(void)
     hal_init(UI_WIDTH, UI_HEIGHT);
     UI_INIT("A:");      /* "A:" = file-system drive for file-based assets */
 
-    /* Load a screen from your project, e.g.:
-     * lv_screen_load(my_screen_create()); */
+    /* 从与固件相同的主页面启动，并绑定应用级交互。
+     * Windows: 鼠标滚轮=旋钮旋转，中键按下/长按=旋钮按钮。
+     * 键盘: Tab/PageDown=下一项，PageUp=上一项，Enter=按下/长按。 */
+    lv_obj_t * home = home_create();
+    if(home != NULL) {
+        H7_MediaPlayer_UI_bind(home);
+        lv_screen_load(home);
+    }
 
     lv_unlock();
 
