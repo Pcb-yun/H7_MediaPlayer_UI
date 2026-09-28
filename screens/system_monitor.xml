@@ -1,0 +1,72 @@
+<!-- 系统监视器：外层旋钮切换大项；点按进入后，才滚动文本或在内部信息框间移动。 -->
+<screen>
+	<view style_text_font="cjk_sc_14" style_pad_all="0" style_bg_color="0x080808" style_bg_opa="100%">
+		<page_header name="sysmon_header" x="0" y="0" title="系统监视" />
+		<lv_obj
+			name="sysmon_page"
+			x="0"
+			y="34"
+			width="100%"
+			height="206"
+			flex_flow="column"
+			style_pad_left="8"
+			style_pad_right="8"
+			style_pad_top="6"
+			style_pad_bottom="7"
+			style_pad_row="4"
+			style_bg_opa="0"
+			style_border_width="0"
+		>
+			<!-- 当前大项标题；页数不在界面中显示。 -->
+			<lv_obj width="100%" height="22" style_pad_all="0" style_bg_opa="0" style_border_width="0">
+				<lv_obj
+					x="0"
+					align="left_mid"
+					width="4"
+					height="16"
+					style_radius="2"
+					style_bg_color="0xff72b6"
+					style_bg_opa="100%"
+					style_border_width="0"
+				/>
+				<lv_label
+					name="sysmon_page_title"
+					x="10"
+					align="left_mid"
+					text="基础信息"
+					style_text_font="cjk_sc_14"
+					style_text_color="0xf3f4f6"
+				/>
+			</lv_obj>
+
+			<!-- 大项内容区：外层聚焦后点按进入；项目页的小信息框由控制器动态复用。 -->
+			<lv_obj
+				name="sysmon_page_body"
+				width="100%"
+				flex_grow="1"
+				flex_flow="column"
+				style_pad_left="10"
+				style_pad_right="10"
+				style_pad_top="8"
+				style_pad_bottom="8"
+				style_pad_row="4"
+				style_radius="10"
+				style_bg_color="0x111827"
+				style_bg_opa="100%"
+				style_border_width="1"
+				style_border_color="0xff72b6"
+			>
+				<lv_label
+					name="sysmon_page_text"
+					width="100%"
+					height="content"
+					text="--"
+					long_mode="wrap"
+					style_text_font="cjk_sc_14"
+					style_text_color="0xe5e7eb"
+					style_text_line_space="3"
+				/>
+			</lv_obj>
+		</lv_obj>
+	</view>
+</screen>

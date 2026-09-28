@@ -21,6 +21,7 @@ rem    烘焙图片数据     images 目录下的 *_data.c
 rem    源文件列表       file_list_gen.cmake
 rem    导出构建脚本     CMakeLists.txt（只删它，user_config.cmake 不动）
 rem    预览运行时缓存   preview-bin 目录
+rem    预览构建产物     preview-build 目录
 rem    编辑器缓存       .cache.json
 rem
 rem  不删（这些是工程源或自己写的东西）：
@@ -55,15 +56,20 @@ for /f "delims=" %%f in ('dir /b /a-d "%ROOT%images\*_data.c" 2^>nul') do call :
 rem ---- 4) 生成的源文件列表、导出的构建脚本、编辑器缓存 ----
 for %%f in (file_list_gen.cmake CMakeLists.txt .cache.json) do call :del "%ROOT%%%f"
 
-rem ---- 5) 本地预览运行时缓存（整个目录） ----
+rem ---- 5) 本地预览运行时与构建缓存（整个目录） ----
 if exist "%ROOT%preview-bin\" (
 	rd /s /q "%ROOT%preview-bin"
 	echo   [目录] preview-bin\
 	set /a total+=1
 )
 
-rem 想连构建产物一起清掉，把下面两行的 rem 去掉即可
-rem if exist "%ROOT%preview-build\" ( rd /s /q "%ROOT%preview-build" ^& echo   [目录] preview-build\ ^& set /a total+=1 )
+if exist "%ROOT%preview-build\" (
+	rd /s /q "%ROOT%preview-build"
+	echo   [目录] preview-build\
+	set /a total+=1
+)
+
+rem 想连工程构建产物一起清掉，把下面一行的 rem 去掉即可
 rem if exist "%ROOT%build\" ( rd /s /q "%ROOT%build" ^& echo   [目录] build\ ^& set /a total+=1 )
 
 echo.

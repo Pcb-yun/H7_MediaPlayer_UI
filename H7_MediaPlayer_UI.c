@@ -8,8 +8,21 @@
 
 #include "H7_MediaPlayer_UI.h"
 #include "audio_player.h"
-#include "../lvgl_fatfs.h"
+#include "apps/launcher/launcher_controller.h"
+#include "apps/browser/browser_controller.h"
+#include "apps/settings/settings_controller.h"
+#include "apps/system_monitor/system_monitor.h"
+#include "ui/ui_router.h"
+#include "ui/ui_focus.h"
+#include "boot.h"
 #include <stdint.h>
+
+/* 固件读片上RTC；模拟器用本机时间（区分机制与 audio_player_stub.c 相同） */
+#ifdef STM32H723xx
+#include "rtc.h"
+#else
+#include <time.h>
+#endif
 
 /*********************
  *      DEFINES
@@ -21,63 +34,33 @@
 
 #define PLAYER_REFRESH_PERIOD   200     /* 播放器状态（进度/时间/播放暂停）刷新周期（ms） */
 
-#define BROWSER_ROOT_PATH       "C:/"   /* 文件浏览的起始目录，盘符与 lvgl_fatfs.h 的 LVGL_FATFS_LETTER 一致 */
-#define BROWSER_ENTRY_MAX       64      /* 单个目录最多列出多少行，防止超大目录把堆占满 */
-
-#ifndef H7_MEDIAPLAYER_FIRMWARE_VERSION
-#define H7_MEDIAPLAYER_FIRMWARE_VERSION "v0.1.0"
-#endif
+#define HOME_CLOCK_REFRESH_PERIOD   1000    // 主页时间/日期刷新周期（ms），按秒跳动
+#define HOME_WIFI_REFRESH_PERIOD    1000    // 主页 Wi-Fi 显示刷新周期（ms），仅读取后台缓存
+#define WIFI_RSSI_STRONG_MIN        (-60)   // dBm，强信号：两根弧线和底部扇形
+#define WIFI_RSSI_MEDIUM_MIN        (-75)   // dBm，中信号：一根弧线和底部扇形
 
 #define CJK_FONT_LINE_HEIGHT    19      // 中日文位图字体的每行高度（14号烘焙行高约27）
 #define CJK_FONT_BASE_LINE      4       // 基线下方留白（14号烘焙值约8）
+#define UI_RUNTIME_FONT_FILE    "fonts/SourceHanSansCN-Regular.ttf"
 
 /**********************
  *      TYPEDEFS
  **********************/
 
-/* 屏标识：主屏与播放器屏之间靠旋转循环，文件浏览屏由播放列表键进入、由返回行退出 */
-typedef enum {
-    SCREEN_HOME,
-    SCREEN_LAUNCHER,
-    SCREEN_SETTINGS,
-    SCREEN_ABOUT,
-    SCREEN_APP_PLACEHOLDER,
-    SCREEN_PLAYER,
-    SCREEN_BROWSER,
-} screen_id_t;
-
-typedef struct {
-    const char * name;
-} launcher_app_t;
-
-/* 文件浏览列表行的类型，决定按下后干什么 */
-typedef enum {
-    BROWSER_ENTRY_NONE,     /* 不可操作行（打开失败、条目截断提示） */
-    BROWSER_ENTRY_PARENT,   /* 上一级目录 */
-    BROWSER_ENTRY_DIR,      /* 子目录 */
-    BROWSER_ENTRY_FILE,     /* 普通文件；音乐选曲模式下仅创建支持的音频文件行 */
-} browser_entry_kind_t;
-
-typedef enum {
-    BROWSER_MODE_FILES,
-    BROWSER_MODE_MUSIC,
-} browser_mode_t;
-
 /**********************
  *  STATIC PROTOTYPES
  **********************/
 
-static void switch_done_cb(lv_event_t * e);
-static void playpause_cb(lv_event_t * e);
-static void prev_track_cb(lv_event_t * e);
-static void next_track_cb(lv_event_t * e);
-static void repeat_mode_cb(lv_event_t * e);
+static void playpause_cb(lv_obj_t * obj, void * user_data);
+static void prev_track_cb(lv_obj_t * obj, void * user_data);
+static void next_track_cb(lv_obj_t * obj, void * user_data);
+static void repeat_mode_cb(lv_obj_t * obj, void * user_data);
 static const void * repeat_mode_icon(uint8_t mode);
-static void volume_toggle_cb(lv_event_t * e);
+static void volume_toggle_cb(lv_obj_t * obj, void * user_data);
 static void volume_key_cb(lv_event_t * e);
-static void progress_toggle_cb(lv_event_t * e);
+static void progress_toggle_cb(lv_obj_t * obj, void * user_data);
 static void progress_key_cb(lv_event_t * e);
-static void power_cb(lv_event_t * e);
+static void power_cb(lv_obj_t * obj, void * user_data);
 static void focus_watch_cb(lv_event_t * e);
 
 static void volume_apply(void);
@@ -87,61 +70,52 @@ static void player_refresh_cb(lv_timer_t * t);
 static void meta_refresh(const audio_player_snapshot_t * snapshot, bool active);
 static void lyric_refresh(const audio_player_snapshot_t * snapshot, bool active);
 
-static void ui_goto(screen_id_t id, bool forward);
-static void playlist_open_cb(lv_event_t * e);
-static void browser_entry_cb(lv_event_t * e);
-static void browser_file_double_cb(lv_event_t * e);
-static void browser_delete_cb(lv_event_t * e);
-static void browser_back_cb(lv_event_t * e);
-static void browser_menu_close_cb(lv_event_t * e);
-static void player_back_cb(lv_event_t * e);
-static void home_open_launcher_cb(lv_event_t * e);
-static void launcher_app_cb(lv_event_t * e);
-static void launcher_back_cb(lv_event_t * e);
-static void launcher_focus_cb(lv_event_t * e);
-static void settings_about_cb(lv_event_t * e);
-static void settings_back_cb(lv_event_t * e);
-static void about_back_cb(lv_event_t * e);
-static void placeholder_back_cb(lv_event_t * e);
-static void launcher_bind(lv_obj_t * screen);
-static void settings_bind(lv_obj_t * screen);
-static void about_bind(lv_obj_t * screen);
+static void playlist_open_cb(lv_obj_t * obj, void * user_data);
+static bool music_browser_filter(const char * name, bool is_directory, void * user_data);
+static void music_browser_select(const char * path, void * user_data);
+static void firmware_browser_select(const char * path, void * user_data);
+static void player_back_cb(lv_obj_t * obj, void * user_data);
+static void home_open_launcher_cb(lv_obj_t * obj, void * user_data);
+static void launcher_navigate(launcher_nav_target_t target);
+static void settings_navigate(settings_nav_target_t target);
+static void ui_home_cb(lv_obj_t * obj, void * user_data);
+static void system_monitor_back_cb(lv_obj_t * obj, void * user_data);
+static void placeholder_back_cb(lv_obj_t * obj, void * user_data);
 static void placeholder_bind(lv_obj_t * screen);
-static void launcher_update_page(lv_obj_t * screen);
 
-static void browser_bind(lv_obj_t * screen);
-static void browser_scan(void);
-static void browser_focus_first(void);
-static lv_obj_t * browser_add_row(const char * icon, const char * text, browser_entry_kind_t kind);
 static lv_font_t * cjk_font_for_text(const char * text);
 static void cjk_font_line_height_compact(void);
+static void runtime_fonts_init(const char * asset_path);
+static void runtime_fonts_apply_home(lv_obj_t * screen);
 static void obj_set_hidden(lv_obj_t * obj, bool hidden);
-static const char * browser_row_name(lv_obj_t * btn);
-static bool browser_dir_enter(const char * name);
-static bool browser_dir_up(void);
-static void browser_menu_close(bool restore_focus);
-static void browser_menu_focus_scope(bool menu_only);
+
+static const char * weekday_name(uint8_t weekday);
+static void home_clock_refresh(void);
+static void home_clock_refresh_cb(lv_timer_t * t);
+static void home_wifi_refresh(void);
+static void home_wifi_refresh_cb(lv_timer_t * t);
 
 /**********************
  *  STATIC VARIABLES
  **********************/
 
 /* 烘焙字体数据本身（const，编辑器生成）：gen.h 里只有字体指针，这里自己声明 */
-extern const lv_font_t cjk_sc_12_data;
-extern const lv_font_t cjk_jp_12_data;
+extern const lv_font_t cjk_sc_14_data;
+extern const lv_font_t cjk_jp_14_data;
 
 /* 行高压缩用的可写字体描述符副本：生成的 cjk_*_data 是 const，改不了，拷贝一份出来改 */
-static lv_font_t cjk_sc_12_compact;
-static lv_font_t cjk_jp_12_compact;
+static lv_font_t cjk_sc_compact;
+static lv_font_t cjk_jp_compact;
+
+/* TinyTTF 字体按字号各建一个实例；字体对象的 size 可变，不能让不同字号控件共用同一实例。 */
+static lv_font_t * runtime_font_14;
+static lv_font_t * runtime_font_44;
 
 /* 默认字体指针，供固件 Applications/lvgl/lv_conf.h 的 LV_FONT_DEFAULT 使用
    （预览侧的 lv_conf.h 不引用它，所以预览用 montserrat_12 作默认字体）。
    指向下面行高压缩后的副本，必须在首次绘制前填好 —— 见 cjk_font_line_height_compact() */
-const lv_font_t * const lv_ui_font_default = &cjk_sc_12_compact;
+const lv_font_t * const lv_ui_font_default = &cjk_sc_compact;
 
-static screen_id_t cur_screen = SCREEN_HOME;    /* 当前所在屏（切屏入口唯一，用它记忆状态） */
-static bool switching;           /* 屏幕过渡进行中，忽略边界回调的重复触发 */
-static bool switch_forward = true;  /* 本次切屏方向：true=向右（正向），false=向左（反向） */
 /* 循环模式：0=列表顺序 queue，1=列表循环 repeat，2=单曲循环 repeat_one，3=随机 shuffle。
    上电默认列表循环，且跨屏保留（切屏不复位，进播放器屏时再同步给播放器） */
 static uint8_t repeat_mode = AUDIO_REPEAT_ALL;
@@ -171,40 +145,33 @@ static uint16_t progress_pos;       /* 已播位置（秒），取自播放器�
 static uint16_t progress_dur;       /* 总时长（秒），取自播放器状态 */
 static bool player_playing;         /* 播放器屏当前是否在播放（显示 pause 图标），由 player_refresh 刷新 */
 
-static lv_obj_t * browser_list;     /* 文件浏览屏的列表容器（不在浏览屏时为 NULL） */
-static lv_obj_t * browser_path;     /* 文件浏览屏顶部的当前路径标签 */
-static lv_obj_t * browser_menu_overlay;
-static lv_obj_t * browser_menu_name;
-static lv_obj_t * browser_menu_delete;
-static lv_obj_t * browser_menu_source;
-static char browser_dir[LV_FS_MAX_PATH_LENGTH];     /* 当前目录，含盘符且恒以 '/' 结尾（如 "C:/Music/"） */
-static char browser_file[LV_FS_MAX_PATH_LENGTH];    /* 最近选中的文件，预留：接入播放器后用它开播 */
-static char browser_menu_file[LV_FS_MAX_PATH_LENGTH];
-static uint8_t browser_row_kind[BROWSER_ENTRY_MAX]; /* 各行的类型，下标与列表子项顺序一致 */
-static browser_mode_t browser_mode = BROWSER_MODE_FILES;
-static bool browser_menu_open;
+static lv_obj_t * home_time_label;  // 主页大号时间标签（非主页时为 NULL）
+static lv_obj_t * home_date_label;  // 主页日期与星期标签（非主页时为 NULL）
+static lv_obj_t * home_wifi_icon;   // 主页 Wi-Fi 图标
+static lv_obj_t * home_wifi_label;  // 主页 Wi-Fi 状态文字
+static h7_ui_wifi_status_provider_t wifi_status_provider;
+static uint8_t home_wifi_last_state = UINT8_MAX;
+static uint8_t home_wifi_last_level = UINT8_MAX;
 
 static lv_obj_t * focus_list[12];   /* 本屏焦点遍历顺序（XML 创建顺序），容量留余量 */
 static uint8_t focus_cnt;           /* 焦点列表长度 */
 static int8_t focus_idx;            /* 当前焦点索引，-1=未知 */
 
-static const launcher_app_t launcher_apps[] = {
-	{ "设置" },
-	{ "音乐" },
-	{ "文件" },
-	{ "图片" },
-	{ "视频" },
-	{ "相机" },
-	{ "系统监视器" },
-};
-#define LAUNCHER_APP_COUNT ((uint8_t)(sizeof(launcher_apps) / sizeof(launcher_apps[0])))
-#define LAUNCHER_PAGE_SIZE 4u
-static uint8_t launcher_selected;   /* 全局应用序号；页面由它自动推导，顺序始终为行优先 */
-static bool launcher_focus_guard;
-
 /**********************
  *      MACROS
  **********************/
+
+#define SCREEN_HOME             UI_ROUTE_HOME
+#define SCREEN_LAUNCHER         UI_ROUTE_LAUNCHER
+#define SCREEN_SETTINGS         UI_ROUTE_SETTINGS
+#define SCREEN_ABOUT            UI_ROUTE_ABOUT
+#define SCREEN_APP_PLACEHOLDER  UI_ROUTE_APP_PLACEHOLDER
+#define SCREEN_PLAYER           UI_ROUTE_PLAYER
+#define SCREEN_BROWSER          UI_ROUTE_BROWSER
+#define SCREEN_SYSTEM_MONITOR   UI_ROUTE_SYSTEM_MONITOR
+#define cur_screen              ui_router_current()
+#define switch_forward          ui_router_forward()
+#define ui_goto                 ui_router_open
 
 /**********************
  *   GLOBAL FUNCTIONS
@@ -221,9 +188,29 @@ void H7_MediaPlayer_UI_init(const char * asset_path)
     cjk_font_line_height_compact();
 
     H7_MediaPlayer_UI_init_gen(asset_path);
+    runtime_fonts_init(asset_path);
+
+    ui_router_init(H7_MediaPlayer_UI_bind, UI_ROUTE_HOME);
+    ui_focus_set_home_cb(ui_home_cb);    /* 全局长按动作：任何页面长按都回主页 */
+    launcher_controller_init(launcher_navigate);
+    settings_controller_init(settings_navigate);
 
     /* 周期把播放器真实状态同步到播放器屏（不在播放器屏时回调直接返回） */
     lv_timer_create(player_refresh_cb, PLAYER_REFRESH_PERIOD, NULL);
+
+    /* 周期把RTC时间同步到主页时间/日期标签（不在主页时回调直接返回） */
+    lv_timer_create(home_clock_refresh_cb, HOME_CLOCK_REFRESH_PERIOD, NULL);
+
+    /* 状态查询在独立任务中完成；LVGL 定时器只读取缓存并更新控件。 */
+    lv_timer_create(home_wifi_refresh_cb, HOME_WIFI_REFRESH_PERIOD, NULL);
+}
+
+void H7_MediaPlayer_UI_set_wifi_status_provider(
+    h7_ui_wifi_status_provider_t provider)
+{
+    wifi_status_provider = provider;
+    home_wifi_last_state = UINT8_MAX;
+    home_wifi_last_level = UINT8_MAX;
 }
 
 void H7_MediaPlayer_UI_switch_screen(bool forward)
@@ -234,7 +221,13 @@ void H7_MediaPlayer_UI_switch_screen(bool forward)
 
 void H7_MediaPlayer_UI_bind(lv_obj_t * screen)
 {
+    lv_group_t * group;
+
     if(screen == NULL) return;
+
+    /* 换屏后先清掉上一次遗留的组编辑态，否则旋钮只发 LEFT/RIGHT、无法移动焦点 */
+    group = lv_group_get_default();
+    if(group != NULL) lv_group_set_editing(group, false);
 
     /* 非播放器屏没有这些控件，先清空指针，避免切屏后定时器或回调访问已删除的控件 */
     playpause_icon = NULL;
@@ -247,46 +240,55 @@ void H7_MediaPlayer_UI_bind(lv_obj_t * screen)
     lyric_box = NULL;
     lyric_main = NULL;
     lyric_tras = NULL;
+    home_time_label = NULL;
+    home_date_label = NULL;
+    home_wifi_icon = NULL;
+    home_wifi_label = NULL;
+    home_wifi_last_state = UINT8_MAX;
+    home_wifi_last_level = UINT8_MAX;
 
     /* 文件浏览屏的内容是按目录动态生成的列表，不参与"回绕切屏"，单独接线 */
     if(cur_screen == SCREEN_BROWSER) {
-        browser_bind(screen);
+        browser_controller_bind(screen);
         return;
     }
     if(cur_screen == SCREEN_LAUNCHER) {
-        launcher_bind(screen);
+        launcher_controller_bind(screen);
         return;
     }
     if(cur_screen == SCREEN_SETTINGS) {
-        settings_bind(screen);
+        settings_controller_bind(screen);
         return;
     }
     if(cur_screen == SCREEN_ABOUT) {
-        about_bind(screen);
+        settings_about_controller_bind(screen);
         return;
     }
     if(cur_screen == SCREEN_APP_PLACEHOLDER) {
         placeholder_bind(screen);
         return;
     }
-
+    if(cur_screen == SCREEN_SYSTEM_MONITOR) {
+        system_monitor_bind(screen, system_monitor_back_cb);
+        return;
+    }
     if(cur_screen == SCREEN_HOME) {
+        runtime_fonts_apply_home(screen);
+        /* 主页时间/日期：接管标签指针并立即刷一次，之后由定时器按秒维护 */
+        home_time_label = lv_obj_find_by_name(screen, "home_time");
+        home_date_label = lv_obj_find_by_name(screen, "home_date");
+        home_wifi_icon = lv_obj_find_by_name(screen, "home_wifi_icon");
+        home_wifi_label = lv_obj_find_by_name(screen, "home_wifi_state");
+        home_clock_refresh();
+        home_wifi_refresh();
         lv_obj_t * entry = lv_obj_find_by_name(screen, "text_focus");
         if(entry != NULL) {
-            /* 尺寸与透明样式均在 home.xml；这里仅绑定行为。 */
-            lv_obj_add_event_cb(entry, home_open_launcher_cb, LV_EVENT_SHORT_CLICKED, NULL);
+            /* 尺寸与透明样式均在 home.xml；这里仅绑定行为：单击进入应用选择器 */
+            ui_focus_bind_row(entry, home_open_launcher_cb, NULL, NULL);
             lv_group_focus_obj(entry);
         }
         return;
     }
-    browser_list = NULL;    /* 离开浏览屏后清空，避免残留指向已删除屏的控件 */
-    browser_path = NULL;
-    browser_menu_overlay = NULL;
-    browser_menu_name = NULL;
-    browser_menu_delete = NULL;
-    browser_menu_source = NULL;
-    browser_menu_open = false;
-
     /* 记录本屏焦点遍历顺序并监听焦点变化：多控件屏中焦点到端点后 LVGL 会自动回绕
        （edge_cb 不触发），靠回绕检测实现遍历完切屏，所以顺序必须与 XML 创建顺序一致：
        主屏文字框；播放器顶栏电源、播放列表；进度条；播放器底栏音量、上一曲、播放/暂停、下一曲、循环模式 */
@@ -304,7 +306,8 @@ void H7_MediaPlayer_UI_bind(lv_obj_t * screen)
         focus_list[focus_cnt++] = obj;
         lv_obj_add_event_cb(obj, focus_watch_cb, LV_EVENT_FOCUSED, NULL);
         if(cur_screen == SCREEN_PLAYER) {
-            lv_obj_add_event_cb(obj, player_back_cb, LV_EVENT_LONG_PRESSED, NULL);
+            /* 播放器屏：双击任一控件返回启动器，长按回主页 */
+            ui_focus_bind_row(obj, NULL, player_back_cb, NULL);
         }
     }
 
@@ -320,7 +323,7 @@ void H7_MediaPlayer_UI_bind(lv_obj_t * screen)
     lv_obj_t * btn = lv_obj_find_by_name(screen, "btn_playpause");
     if(btn != NULL) {
         playpause_icon = lv_obj_get_child(btn, 0);    /* 按钮内唯一子控件即图标 */
-        lv_obj_add_event_cb(btn, playpause_cb, LV_EVENT_SHORT_CLICKED, NULL);
+        ui_focus_bind_row(btn, playpause_cb, NULL, NULL);
     }
     else {
         playpause_icon = NULL;
@@ -328,10 +331,10 @@ void H7_MediaPlayer_UI_bind(lv_obj_t * screen)
 
     /* 播放器：上一曲/下一曲（预留接口）与循环模式切换 */
     lv_obj_t * btn_prev = lv_obj_find_by_name(screen, "btn_prev");
-    if(btn_prev != NULL) lv_obj_add_event_cb(btn_prev, prev_track_cb, LV_EVENT_SHORT_CLICKED, NULL);
+    if(btn_prev != NULL) ui_focus_bind_row(btn_prev, prev_track_cb, NULL, NULL);
 
     lv_obj_t * btn_next = lv_obj_find_by_name(screen, "btn_next");
-    if(btn_next != NULL) lv_obj_add_event_cb(btn_next, next_track_cb, LV_EVENT_SHORT_CLICKED, NULL);
+    if(btn_next != NULL) ui_focus_bind_row(btn_next, next_track_cb, NULL, NULL);
 
     lv_obj_t * btn_repeat = lv_obj_find_by_name(screen, "btn_repeat");
     if(btn_repeat != NULL) {
@@ -341,16 +344,16 @@ void H7_MediaPlayer_UI_bind(lv_obj_t * screen)
         if(repeat_icon != NULL) lv_image_set_src(repeat_icon, repeat_mode_icon(repeat_mode));
 
         (void)audio_player_set_repeat((audio_repeat_t)repeat_mode);
-        lv_obj_add_event_cb(btn_repeat, repeat_mode_cb, LV_EVENT_SHORT_CLICKED, NULL);
+        ui_focus_bind_row(btn_repeat, repeat_mode_cb, NULL, NULL);
     }
 
     /* 播放器：播放列表键进入文件浏览屏 */
     lv_obj_t * btn_playlist = lv_obj_find_by_name(screen, "btn_playlist");
-    if(btn_playlist != NULL) lv_obj_add_event_cb(btn_playlist, playlist_open_cb, LV_EVENT_SHORT_CLICKED, NULL);
+    if(btn_playlist != NULL) ui_focus_bind_row(btn_playlist, playlist_open_cb, NULL, NULL);
 
     /* 播放器：电源键暂接成"停止播放"（电源语义未定），给界面一个结束播放的入口 */
     lv_obj_t * btn_power = lv_obj_find_by_name(screen, "btn_power");
-    if(btn_power != NULL) lv_obj_add_event_cb(btn_power, power_cb, LV_EVENT_SHORT_CLICKED, NULL);
+    if(btn_power != NULL) ui_focus_bind_row(btn_power, power_cb, NULL, NULL);
 
     /* 播放器：音量键按下展开音量条，展开期间旋转调音量、再次按下收起（主屏上查找为空，状态自然复位） */
     volume_popup = lv_obj_find_by_name(screen, "volume_popup");
@@ -364,21 +367,20 @@ void H7_MediaPlayer_UI_bind(lv_obj_t * screen)
     }
     if(volume_popup != NULL) {
         obj_set_hidden(volume_popup, true);         /* 进屏与切屏重建后统一收起 */
-        lv_obj_set_flag(volume_popup, LV_OBJ_FLAG_SCROLLABLE, false);   /* 避免内容超界时画出滚动条 */
+        lv_obj_remove_flag(volume_popup, LV_OBJ_FLAG_SCROLLABLE);   /* 避免内容超界时画出滚动条 */
     }
 
     lv_obj_t * btn_volume = lv_obj_find_by_name(screen, "btn_volume");
     if(btn_volume != NULL) {
         volume_icon = lv_obj_get_child(btn_volume, 0);    /* 按钮内唯一子控件即音量图标 */
-        lv_obj_add_event_cb(btn_volume, volume_toggle_cb, LV_EVENT_SHORT_CLICKED, NULL);
+        ui_focus_bind_row(btn_volume, volume_toggle_cb, NULL, NULL);
         lv_obj_add_event_cb(btn_volume, volume_key_cb, LV_EVENT_KEY, NULL);
     }
     else {
         volume_icon = NULL;
     }
 
-    /* 播放器：进度条与播放时间；数值由 player_refresh 按播放器状态刷新
-       （时间字号由 XML 的 style_text_font="montserrat_10" 设置，保证编辑器预览一致） */
+    /* 播放器：进度条与播放时间；数值由 player_refresh 按播放器状态刷新，字体使用 cjk_sc_14。 */
     progress_fill = lv_obj_find_by_name(screen, "progress_fill");
     progress_time = lv_obj_find_by_name(screen, "progress_time");
     progress_editing = false;           /* 每次进屏都回到非调整态 */
@@ -400,7 +402,7 @@ void H7_MediaPlayer_UI_bind(lv_obj_t * screen)
     /* 进度轨道（可聚焦）：按下进出时间调整态；调整态下旋钮的 KEY 事件才真正发 seek 请求 */
     lv_obj_t * track = lv_obj_find_by_name(screen, "progress_track");
     if(track != NULL) {
-        lv_obj_add_event_cb(track, progress_toggle_cb, LV_EVENT_SHORT_CLICKED, NULL);
+        ui_focus_bind_row(track, progress_toggle_cb, NULL, NULL);
         lv_obj_add_event_cb(track, progress_key_cb, LV_EVENT_KEY, NULL);
     }
 
@@ -412,11 +414,12 @@ void H7_MediaPlayer_UI_bind(lv_obj_t * screen)
  *   STATIC FUNCTIONS
  **********************/
 
-/** @brief 显示/隐藏控件（使用 LVGL 9.5 的专用 flag setter）。 */
+/** @brief 显示/隐藏控件（使用 LVGL 9 的对象 flag API）。 */
 static void obj_set_hidden(lv_obj_t * obj, bool hidden)
 {
 	if(obj == NULL) return;
-	lv_obj_set_flag(obj, LV_OBJ_FLAG_HIDDEN, hidden);
+	if(hidden) lv_obj_add_flag(obj, LV_OBJ_FLAG_HIDDEN);
+	else lv_obj_remove_flag(obj, LV_OBJ_FLAG_HIDDEN);
 }
 
 /**
@@ -430,270 +433,322 @@ static void obj_set_hidden(lv_obj_t * obj, bool hidden)
  */
 static void cjk_font_line_height_compact(void)
 {
-	cjk_sc_12_compact = cjk_sc_12_data;
-	cjk_sc_12_compact.line_height = CJK_FONT_LINE_HEIGHT;
-	cjk_sc_12_compact.base_line = CJK_FONT_BASE_LINE;
-	cjk_jp_12_compact = cjk_jp_12_data;
-	cjk_jp_12_compact.line_height = CJK_FONT_LINE_HEIGHT;
-	cjk_jp_12_compact.base_line = CJK_FONT_BASE_LINE;
+	cjk_sc_compact = cjk_sc_14_data;
+	cjk_sc_compact.line_height = CJK_FONT_LINE_HEIGHT;
+	cjk_sc_compact.base_line = CJK_FONT_BASE_LINE;
+	#if LV_FONT_MONTSERRAT_14
+	cjk_sc_compact.fallback = &lv_font_montserrat_14;
+	#endif
+	cjk_jp_compact = cjk_jp_14_data;
+	cjk_jp_compact.line_height = CJK_FONT_LINE_HEIGHT;
+	cjk_jp_compact.base_line = CJK_FONT_BASE_LINE;
+	#if LV_FONT_MONTSERRAT_14
+	cjk_jp_compact.fallback = &lv_font_montserrat_14;
+	#endif
 
 	/* 各屏的 create 读的就是这两个指针，换掉即全局生效（含默认字体） */
-	cjk_sc_14 = &cjk_sc_12_compact;
-	cjk_jp_14 = &cjk_jp_12_compact;
+	cjk_sc_14 = &cjk_sc_compact;
+	cjk_jp_14 = &cjk_jp_compact;
 }
 
-/* 切屏统一入口：创建目标屏、绑定、淡入过渡，旧屏在过渡结束后由 auto_del 删除 */
-static void ui_goto(screen_id_t id, bool forward)
+/**
+ * @brief 从资源根目录加载运行时思源黑体
+ *
+ * 固件传入 C:/，对应 SD 卡 /fonts/SourceHanSansCN-Regular.ttf；
+ * PC 模拟器传入 A:，对应工程 fonts/SourceHanSansCN-Regular.ttf。
+ * 加载失败时保留 XML 中的烘焙字体，不阻断界面启动。
+ */
+static void runtime_fonts_init(const char * asset_path)
 {
-    /* 过渡期间忽略重复触发；已经在该屏则不动作 */
-    if(switching || id == cur_screen) return;
+#if LV_USE_TINY_TTF && LV_TINY_TTF_FILE_SUPPORT
+	char path[LV_FS_MAX_PATH_LENGTH];
+	size_t length;
+	const char * separator;
 
-    /* 记下方向供 bind 决定新屏焦点落点：正向落首项，反向落末项 */
-    switch_forward = forward;
+	if(asset_path == NULL || asset_path[0] == '\0') return;
 
-    /* 三屏均非 permanent，每次切换都重新创建 */
-    lv_obj_t * next = NULL;
-    switch(id) {
-        case SCREEN_LAUNCHER: next = launcher_create(); break;
-        case SCREEN_SETTINGS: next = settings_create(); break;
-        case SCREEN_ABOUT: next = about_create(); break;
-        case SCREEN_APP_PLACEHOLDER: next = app_placeholder_create(); break;
-        case SCREEN_PLAYER:  next = player_create();  break;
-        case SCREEN_BROWSER: next = browser_create(); break;
-        default:             next = home_create();    break;
-    }
-    if(next == NULL) return;
+	length = lv_strlen(asset_path);
+	separator = (asset_path[length - 1U] == ':' ||
+	             asset_path[length - 1U] == '/' ||
+	             asset_path[length - 1U] == '\\') ? "" : "/";
+	lv_snprintf(path, sizeof(path), "%s%s%s", asset_path, separator, UI_RUNTIME_FONT_FILE);
 
-    cur_screen = id;
-    switching = true;
-    H7_MediaPlayer_UI_bind(next);
+	runtime_font_14 = lv_tiny_ttf_create_file(path, 14);
+	runtime_font_44 = lv_tiny_ttf_create_file(path, 44);
 
-    /* 挂在旧屏上：过渡完成（旧屏卸载）后解除防重，旧屏随后被 auto_del 删除 */
-    lv_obj_add_event_cb(lv_screen_active(), switch_done_cb, LV_EVENT_SCREEN_UNLOADED, NULL);
-    lv_screen_load_anim(next, LV_SCR_LOAD_ANIM_FADE_ON, 300, 0, true);
+#if LV_FONT_MONTSERRAT_14
+	if(runtime_font_14 != NULL) runtime_font_14->fallback = &lv_font_montserrat_14;
+#endif
+
+	if(runtime_font_14 == NULL || runtime_font_44 == NULL) {
+		LV_LOG_WARN("TinyTTF font load incomplete: %s", path);
+	}
+#else
+	LV_UNUSED(asset_path);
+#endif
 }
 
-/* 过渡完成回调：解除切屏防重 */
-static void switch_done_cb(lv_event_t * e)
+/**
+ * @brief 只给主页面低刷新频率文本应用 TinyTTF
+ *
+ * 播放器歌词、浏览器列表等高频刷新区域继续使用烘焙字体。
+ */
+static void runtime_fonts_apply_home(lv_obj_t * screen)
 {
-    LV_UNUSED(e);
-    switching = false;
+	lv_obj_t * obj;
+
+	if(screen == NULL) return;
+
+	if(runtime_font_44 != NULL) {
+		obj = lv_obj_find_by_name(screen, "home_time");
+		if(obj != NULL) lv_obj_set_style_text_font(obj, runtime_font_44, 0);
+	}
+
+	if(runtime_font_14 != NULL) {
+		static const char * names[] = {"home_date", "home_wifi_state"};
+		for(uint32_t i = 0; i < sizeof(names) / sizeof(names[0]); i++) {
+			obj = lv_obj_find_by_name(screen, names[i]);
+			if(obj != NULL) lv_obj_set_style_text_font(obj, runtime_font_14, 0);
+		}
+	}
+}
+
+/* 把缓存状态映射到主页文字和四态 Wi-Fi 图标。
+   三格轮廓始终保留：激活格为白色，未激活格为深灰，关闭态叠加白色斜杠。 */
+static void home_wifi_refresh(void)
+{
+	h7_ui_wifi_status_t status = {
+		.state = H7_UI_WIFI_OFF,
+		.rssi = INT8_MIN,
+	};
+	const void * icon_src = wifi_off;
+	const char * label_text = "已关闭";
+	uint8_t signal_level = 0;
+
+	if(home_wifi_icon == NULL || home_wifi_label == NULL) return;
+	if(wifi_status_provider != NULL && !wifi_status_provider(&status)) return;
+
+	switch(status.state) {
+		case H7_UI_WIFI_CONNECTED:
+			label_text = "已连接";
+			if(status.rssi >= WIFI_RSSI_STRONG_MIN) {
+				signal_level = 2;
+				icon_src = wifi_connected;
+			} else if(status.rssi >= WIFI_RSSI_MEDIUM_MIN) {
+				signal_level = 1;
+				icon_src = wifi_signal_medium;
+			}
+			break;
+
+		case H7_UI_WIFI_CONNECTING:
+			label_text = "连接中";
+			signal_level = 1;
+			icon_src = wifi_signal_medium;
+			break;
+
+		case H7_UI_WIFI_ON:
+			label_text = "已打开";
+			icon_src = wifi_signal_weak;
+			break;
+
+		case H7_UI_WIFI_OFF:
+		default:
+			status.state = H7_UI_WIFI_OFF;
+			break;
+	}
+
+	if(home_wifi_last_state == (uint8_t)status.state &&
+	   home_wifi_last_level == signal_level) {
+		return;
+	}
+
+	lv_label_set_text(home_wifi_label, label_text);
+	lv_image_set_src(home_wifi_icon, icon_src);
+	lv_obj_set_style_image_opa(home_wifi_icon, LV_OPA_COVER, LV_PART_MAIN);
+	home_wifi_last_state = (uint8_t)status.state;
+	home_wifi_last_level = signal_level;
+}
+
+static void home_wifi_refresh_cb(lv_timer_t * t)
+{
+	LV_UNUSED(t);
+	home_wifi_refresh();
+}
+
+/* 星期序号 → 中文名（RTC WeekDay 与 tm_wday 均已归一化为 1=周一 ... 7=周日） */
+static const char * weekday_name(uint8_t weekday)
+{
+	static const char * names[] = { "周一", "周二", "周三", "周四", "周五", "周六", "周日" };
+
+	if(weekday < 1 || weekday > 7) return "";
+	return names[weekday - 1];
+}
+
+/* 读取当前时间刷新主页时间/日期标签；文本未变化时不重设，避免无谓重排版。
+   固件读片上RTC（WiFi时间同步已写入），模拟器用本机时间便于预览 */
+static void home_clock_refresh(void)
+{
+	uint8_t hour;
+	uint8_t minute;
+	uint8_t month;
+	uint8_t day;
+	uint8_t weekday;
+	char buf[32];
+
+	if(home_time_label == NULL) return;    // 不在主页
+
+#ifdef STM32H723xx
+	RTC_TimeTypeDef time = {0};
+	RTC_DateTypeDef date = {0};
+
+	HAL_RTC_GetTime(&hrtc, &time, RTC_FORMAT_BIN);
+	HAL_RTC_GetDate(&hrtc, &date, RTC_FORMAT_BIN);    // 必须紧跟 GetTime，解锁日历影子寄存器
+	hour = time.Hours;
+	minute = time.Minutes;
+	month = date.Month;
+	day = date.Date;
+	weekday = date.WeekDay;
+#else
+	time_t now = time(NULL);
+	struct tm * local = localtime(&now);
+
+	if(local == NULL) return;
+	hour = (uint8_t)local->tm_hour;
+	minute = (uint8_t)local->tm_min;
+	month = (uint8_t)(local->tm_mon + 1);
+	day = (uint8_t)local->tm_mday;
+	weekday = (uint8_t)((local->tm_wday == 0) ? 7 : local->tm_wday);
+#endif
+
+	lv_snprintf(buf, sizeof(buf), "%02u:%02u", (unsigned)hour, (unsigned)minute);
+	if(lv_strcmp(lv_label_get_text(home_time_label), buf) != 0) {
+		lv_label_set_text(home_time_label, buf);
+	}
+
+	if(home_date_label == NULL) return;
+	lv_snprintf(buf, sizeof(buf), "%u月%u日  %s",
+	            (unsigned)month, (unsigned)day, weekday_name(weekday));
+	if(lv_strcmp(lv_label_get_text(home_date_label), buf) != 0) {
+		lv_label_set_text(home_date_label, buf);
+	}
+}
+
+/* 时钟定时器回调：非主页时标签指针为空，刷新直接返回 */
+static void home_clock_refresh_cb(lv_timer_t * t)
+{
+	LV_UNUSED(t);
+	home_clock_refresh();
 }
 
 /* 主页面短按：进入应用选择器时始终从左上角的“设置”开始。 */
-static void home_open_launcher_cb(lv_event_t * e)
+static void home_open_launcher_cb(lv_obj_t * obj, void * user_data)
 {
-    LV_UNUSED(e);
-    launcher_selected = 0u;
+    LV_UNUSED(obj);
+    LV_UNUSED(user_data);
+    launcher_controller_reset();
     ui_goto(SCREEN_LAUNCHER, true);
 }
 
-/* 应用磁贴短按只进入对应的占位页；后续接入业务时在此按序号分发即可。 */
-static void launcher_app_cb(lv_event_t * e)
+static void launcher_navigate(launcher_nav_target_t target)
 {
-    launcher_selected = (uint8_t)(uintptr_t)lv_event_get_user_data(e);
-    if(launcher_selected == 0u) {
-        ui_goto(SCREEN_SETTINGS, true);
-    } else if(launcher_selected == 1u) {
-        ui_goto(SCREEN_PLAYER, true);
-    } else if(launcher_selected == 2u) {
-        browser_mode = BROWSER_MODE_FILES;
-        ui_goto(SCREEN_BROWSER, true);
-    } else {
-        ui_goto(SCREEN_APP_PLACEHOLDER, true);
+    switch(target) {
+        case LAUNCHER_NAV_SETTINGS:
+            ui_goto(SCREEN_SETTINGS, true);
+            break;
+        case LAUNCHER_NAV_MUSIC:
+            ui_goto(SCREEN_PLAYER, true);
+            break;
+        case LAUNCHER_NAV_FILES:
+            (void)browser_controller_open(&(browser_controller_request_t) {
+                .root_path = "C:/", .allow_directories = true, .allow_delete = true,
+                .return_route = SCREEN_LAUNCHER,
+            });
+            break;
+        case LAUNCHER_NAV_SYSTEM_MONITOR:
+            ui_goto(SCREEN_SYSTEM_MONITOR, true);
+            break;
+        case LAUNCHER_NAV_PLACEHOLDER:
+            ui_goto(SCREEN_APP_PLACEHOLDER, true);
+            break;
+        default:
+            ui_goto(SCREEN_HOME, false);
+            break;
     }
 }
 
 /* 设置页统一采用长按返回；具体设置动作在各功能接入时再绑定。 */
-static void settings_back_cb(lv_event_t * e)
+static void settings_navigate(settings_nav_target_t target)
 {
-    LV_UNUSED(e);
-    ui_goto(SCREEN_LAUNCHER, false);
+    switch(target) {
+        case SETTINGS_NAV_ABOUT:
+            ui_goto(SCREEN_ABOUT, true);
+            break;
+        case SETTINGS_NAV_SETTINGS:
+            ui_goto(SCREEN_SETTINGS, false);
+            break;
+        case SETTINGS_NAV_FIRMWARE_BROWSER:
+            /* 本地更新：复用浏览屏只列出 .bin 固件文件，选中后由 BootShared_Update 复位烧录 */
+            (void)browser_controller_open(&(browser_controller_request_t) {
+                .root_path = "C:/", .extensions = "hex", .allow_directories = false,
+                .select_cb = firmware_browser_select, .return_route = SCREEN_SETTINGS,
+            });
+            break;
+        default:
+            ui_goto(SCREEN_LAUNCHER, false);
+            break;
+    }
 }
 
-static void settings_about_cb(lv_event_t * e)
+/* 全局长按动作：任意页面长按都回主页。 */
+static void ui_home_cb(lv_obj_t * obj, void * user_data)
 {
-    LV_UNUSED(e);
-    ui_goto(SCREEN_ABOUT, true);
-}
-
-static void about_back_cb(lv_event_t * e)
-{
-    LV_UNUSED(e);
-    ui_goto(SCREEN_SETTINGS, false);
-}
-
-/* 选择器长按退出至纯背景主页面。 */
-static void launcher_back_cb(lv_event_t * e)
-{
-    LV_UNUSED(e);
+    LV_UNUSED(obj);
+    LV_UNUSED(user_data);
     ui_goto(SCREEN_HOME, false);
 }
 
-/* 当前页首尾回绕时，切换 XML 页面容器，并继续聚焦全局序列中的相邻应用。 */
-static void launcher_focus_cb(lv_event_t * e)
+/* 系统监视页双击返回应用选择器，并保留刚才选中的应用。 */
+static void system_monitor_back_cb(lv_obj_t * obj, void * user_data)
 {
-    uint8_t focused = (uint8_t)(uintptr_t)lv_event_get_user_data(e);
-    uint8_t page = launcher_selected / LAUNCHER_PAGE_SIZE;
-    uint8_t first = page * LAUNCHER_PAGE_SIZE;
-    uint8_t last = first + LAUNCHER_PAGE_SIZE - 1u;
-    lv_obj_t * screen;
-    char name[24];
-
-    if(launcher_focus_guard) return;
-    if(last >= LAUNCHER_APP_COUNT) last = LAUNCHER_APP_COUNT - 1u;
-
-    if(launcher_selected == last && focused == first) {
-        launcher_selected = (uint8_t)((last + 1u) % LAUNCHER_APP_COUNT);
-    } else if(launcher_selected == first && focused == last) {
-        launcher_selected = (uint8_t)((first + LAUNCHER_APP_COUNT - 1u) % LAUNCHER_APP_COUNT);
-    } else {
-        launcher_selected = focused;
-        return;
-    }
-
-    screen = lv_obj_get_screen(lv_event_get_target(e));
-    launcher_update_page(screen);
-    lv_snprintf(name, sizeof(name), "launcher_tile_%u", (unsigned)launcher_selected);
-    lv_obj_t * target = lv_obj_find_by_name(screen, name);
-    if(target != NULL) {
-        launcher_focus_guard = true;
-        lv_group_focus_obj(target);
-        launcher_focus_guard = false;
-    }
-}
-
-/* 应用占位页长按返回应用选择器，并保留刚才选中的应用。 */
-static void placeholder_back_cb(lv_event_t * e)
-{
-    LV_UNUSED(e);
+    LV_UNUSED(obj);
+    LV_UNUSED(user_data);
     ui_goto(SCREEN_LAUNCHER, false);
 }
 
-/* 音乐应用返回启动器只离开界面，播放器任务继续运行。 */
-static void player_back_cb(lv_event_t * e)
+/* 应用占位页双击返回应用选择器，并保留刚才选中的应用。 */
+static void placeholder_back_cb(lv_obj_t * obj, void * user_data)
 {
-    LV_UNUSED(e);
+    LV_UNUSED(obj);
+    LV_UNUSED(user_data);
     ui_goto(SCREEN_LAUNCHER, false);
 }
 
-static void launcher_bind(lv_obj_t * screen)
+/* 音乐应用双击返回启动器只离开界面，播放器任务继续运行。 */
+static void player_back_cb(lv_obj_t * obj, void * user_data)
 {
-    char name[24];
-    lv_obj_t * selected = NULL;
-    lv_group_t * group;
-    uint8_t i;
-
-    launcher_update_page(screen);
-    for(i = 0u; i < LAUNCHER_APP_COUNT; i++) {
-        lv_obj_t * tile;
-        lv_snprintf(name, sizeof(name), "launcher_tile_%u", (unsigned)i);
-        tile = lv_obj_find_by_name(screen, name);
-        if(tile == NULL) continue;
-        lv_obj_add_event_cb(tile, launcher_app_cb, LV_EVENT_SHORT_CLICKED,
-            (void *)(uintptr_t)i);
-        lv_obj_add_event_cb(tile, launcher_back_cb, LV_EVENT_LONG_PRESSED, NULL);
-        lv_obj_add_event_cb(tile, launcher_focus_cb, LV_EVENT_FOCUSED,
-            (void *)(uintptr_t)i);
-        if(i == launcher_selected) selected = tile;
-    }
-    if(selected != NULL) {
-        group = lv_obj_get_group(selected);
-        if(group != NULL) lv_group_set_wrap(group, true);
-        launcher_focus_guard = true;
-        lv_group_focus_obj(selected);
-        launcher_focus_guard = false;
-    }
-}
-
-static void settings_bind(lv_obj_t * screen)
-{
-    static const char * row_names[] = {
-        "settings_brightness",
-        "settings_orientation",
-        "settings_reboot",
-        "settings_local_update",
-        "settings_about",
-    };
-    lv_obj_t * first = NULL;
-    lv_group_t * group = NULL;
-
-    for(uint32_t i = 0; i < sizeof(row_names) / sizeof(row_names[0]); i++) {
-        lv_obj_t * row = lv_obj_find_by_name(screen, row_names[i]);
-        if(row == NULL) continue;
-        if(first == NULL) first = row;
-        lv_obj_add_event_cb(row, settings_back_cb, LV_EVENT_LONG_PRESSED, NULL);
-        if(i == 4u) lv_obj_add_event_cb(row, settings_about_cb, LV_EVENT_SHORT_CLICKED, NULL);
-    }
-
-    if(first != NULL) {
-        group = lv_obj_get_group(first);
-        if(group != NULL) lv_group_set_wrap(group, true);
-        lv_group_focus_obj(first);
-    }
-}
-
-static void about_bind(lv_obj_t * screen)
-{
-    static const char * row_names[] = {
-        "about_intro",
-        "about_repository",
-        "about_version_row",
-        "about_build_row",
-    };
-    lv_obj_t * version = lv_obj_find_by_name(screen, "about_firmware_version");
-    lv_obj_t * build_time = lv_obj_find_by_name(screen, "about_build_time");
-    lv_obj_t * first = NULL;
-    lv_group_t * group = NULL;
-
-    if(version != NULL) lv_label_set_text(version, H7_MEDIAPLAYER_FIRMWARE_VERSION);
-    if(build_time != NULL) lv_label_set_text(build_time, __DATE__ " " __TIME__);
-
-    for(uint32_t i = 0; i < sizeof(row_names) / sizeof(row_names[0]); i++) {
-        lv_obj_t * row = lv_obj_find_by_name(screen, row_names[i]);
-        if(row == NULL) continue;
-        if(first == NULL) first = row;
-        lv_obj_add_event_cb(row, about_back_cb, LV_EVENT_LONG_PRESSED, NULL);
-    }
-
-    if(first != NULL) {
-        group = lv_obj_get_group(first);
-        if(group != NULL) lv_group_set_wrap(group, true);
-        lv_group_focus_obj(first);
-    }
-}
-
-/* XML 定义两页的全部视觉内容；运行时只切换对应容器和页码指示器。 */
-static void launcher_update_page(lv_obj_t * screen)
-{
-    uint8_t active_page = launcher_selected / LAUNCHER_PAGE_SIZE;
-    lv_obj_t * page0 = lv_obj_find_by_name(screen, "launcher_page_0");
-    lv_obj_t * page1 = lv_obj_find_by_name(screen, "launcher_page_1");
-    lv_obj_t * dots0 = lv_obj_find_by_name(screen, "launcher_dots_page_0");
-    lv_obj_t * dots1 = lv_obj_find_by_name(screen, "launcher_dots_page_1");
-    obj_set_hidden(page0, active_page != 0u);
-    obj_set_hidden(page1, active_page != 1u);
-    obj_set_hidden(dots0, active_page != 0u);
-    obj_set_hidden(dots1, active_page != 1u);
+    LV_UNUSED(obj);
+    LV_UNUSED(user_data);
+    ui_goto(SCREEN_LAUNCHER, false);
 }
 
 static void placeholder_bind(lv_obj_t * screen)
 {
     lv_obj_t * back = lv_obj_find_by_name(screen, "app_placeholder_back");
     lv_obj_t * title = lv_obj_find_by_name(screen, "app_placeholder_title");
-    if(title != NULL) lv_label_set_text(title, launcher_apps[launcher_selected].name);
+    if(title != NULL) lv_label_set_text(title, launcher_controller_selected_name());
     if(back == NULL) return;
-    lv_obj_add_event_cb(back, placeholder_back_cb, LV_EVENT_LONG_PRESSED, NULL);
+    ui_focus_bind_row(back, NULL, placeholder_back_cb, NULL);
     lv_group_focus_obj(back);
 }
 
 /* 播放/暂停键回调：正在播放则切换暂停；空闲且此前选过文件则重新起播。
    图标与进度不在这里改，统一由 player_refresh 按播放器真实状态刷新 */
-static void playpause_cb(lv_event_t * e)
+static void playpause_cb(lv_obj_t * obj, void * user_data)
 {
     audio_player_snapshot_t snapshot;
 
-    LV_UNUSED(e);
+    LV_UNUSED(obj);
+    LV_UNUSED(user_data);
     if(audio_player_snapshot(&snapshot) != AUDIO_RES_OK) return;
     if(snapshot.state == AUDIO_PLAYER_PAUSED) {
         (void)audio_player_resume();
@@ -702,22 +757,25 @@ static void playpause_cb(lv_event_t * e)
         (void)audio_player_pause();
     }
     else if((snapshot.state == AUDIO_PLAYER_IDLE || snapshot.state == AUDIO_PLAYER_ERROR) &&
-        browser_file[0] != '\0') {
-        (void)audio_player_play(browser_file);
+        snapshot.source[0] != '\0') {
+        /* 最近播放路径属于播放器状态，不再依赖已经移除的旧浏览器全局变量。 */
+        (void)audio_player_play(snapshot.source);
     }
 }
 
 /* 上一曲按钮回调：在播放列表内往前切一首 */
-static void prev_track_cb(lv_event_t * e)
+static void prev_track_cb(lv_obj_t * obj, void * user_data)
 {
-    LV_UNUSED(e);
+    LV_UNUSED(obj);
+    LV_UNUSED(user_data);
     (void)audio_player_previous();
 }
 
 /* 下一曲按钮回调：在播放列表内往后切一首 */
-static void next_track_cb(lv_event_t * e)
+static void next_track_cb(lv_obj_t * obj, void * user_data)
 {
-    LV_UNUSED(e);
+    LV_UNUSED(obj);
+    LV_UNUSED(user_data);
     (void)audio_player_next();
 }
 
@@ -730,10 +788,11 @@ static const void * repeat_mode_icon(uint8_t mode)
 }
 
 /* 循环模式按钮回调：列表顺序 → 列表循环 → 单曲循环 → 随机，点击循环切换图标 */
-static void repeat_mode_cb(lv_event_t * e)
+static void repeat_mode_cb(lv_obj_t * obj, void * user_data)
 {
-    lv_obj_t * btn = lv_event_get_current_target_obj(e);
-    lv_obj_t * icon = lv_obj_get_child(btn, 0);
+    lv_obj_t * icon = (obj != NULL) ? lv_obj_get_child(obj, 0) : NULL;
+
+    LV_UNUSED(user_data);
     if(icon == NULL) return;
 
     repeat_mode = (uint8_t)((repeat_mode + 1) % 4);
@@ -743,10 +802,11 @@ static void repeat_mode_cb(lv_event_t * e)
 
 /* 音量键回调：按下展开/收起音量条，并同步切换焦点组的编辑态
    （编辑态下编码器旋转才会以 LV_KEY_LEFT/RIGHT 发给焦点对象，而不是移动焦点） */
-static void volume_toggle_cb(lv_event_t * e)
+static void volume_toggle_cb(lv_obj_t * obj, void * user_data)
 {
-    lv_obj_t * btn = lv_event_get_current_target_obj(e);
-    lv_group_t * group = lv_obj_get_group(btn);
+    lv_group_t * group = (obj != NULL) ? lv_obj_get_group(obj) : NULL;
+
+    LV_UNUSED(user_data);
     if(group == NULL) return;
 
     volume_editing = !volume_editing;
@@ -800,29 +860,36 @@ static void volume_apply(void)
     lv_obj_set_height(volume_fill, h);
 }
 
-/* 把当前播放进度应用到界面：进度条按百分比拉伸，时间文本显示 已播 / 总时长。
-   总时长未知（0）时进度条保持空，只显示时间 */
+/* 把当前播放进度应用到界面：进度条按百分比拉伸，时间文本显示剩余时间（-MM:SS）。
+   停止或播放结束时播放器把时长归零，这里同步显示 00:00 */
 static void progress_apply(void)
 {
     int32_t pct = 0;
+    uint16_t remain_s;
+
     if(progress_dur > 0) {
         pct = (int32_t)progress_pos * 100 / (int32_t)progress_dur;
         if(pct > 100) pct = 100;
     }
     if(progress_fill != NULL) lv_obj_set_width(progress_fill, lv_pct(pct));
-    if(progress_time != NULL) {
-        lv_label_set_text_fmt(progress_time, "%02u:%02u / %02u:%02u",
-                              (unsigned)(progress_pos / 60), (unsigned)(progress_pos % 60),
-                              (unsigned)(progress_dur / 60), (unsigned)(progress_dur % 60));
+    if(progress_time == NULL) return;
+
+    if(progress_dur == 0) {         /* 未起播或已播完：剩余时间归零 */
+        lv_label_set_text(progress_time, "00:00");
+        return;
     }
+    remain_s = (progress_pos < progress_dur) ? (uint16_t)(progress_dur - progress_pos) : 0;
+    lv_label_set_text_fmt(progress_time, "-%02u:%02u",
+                          (unsigned)(remain_s / 60u), (unsigned)(remain_s % 60u));
 }
 
 /* 进度条回调：按下进入/退出时间调整态。进入时只做界面预览，不发送 seek；
    只有调整态下旋钮转动（KEY 事件）才真正发 seek 请求 */
-static void progress_toggle_cb(lv_event_t * e)
+static void progress_toggle_cb(lv_obj_t * obj, void * user_data)
 {
-    lv_obj_t * track = lv_event_get_current_target_obj(e);
-    lv_group_t * group = lv_obj_get_group(track);
+    lv_group_t * group = (obj != NULL) ? lv_obj_get_group(obj) : NULL;
+
+    LV_UNUSED(user_data);
     if(group == NULL) return;
 
     progress_editing = !progress_editing;
@@ -956,17 +1023,49 @@ static void player_refresh_cb(lv_timer_t * t)
 }
 
 /* 播放列表键回调：进入文件浏览屏 */
-static void playlist_open_cb(lv_event_t * e)
+static void playlist_open_cb(lv_obj_t * obj, void * user_data)
 {
-    LV_UNUSED(e);
-    browser_mode = BROWSER_MODE_MUSIC;
-    ui_goto(SCREEN_BROWSER, true);
+    LV_UNUSED(obj);
+    LV_UNUSED(user_data);
+    (void)browser_controller_open(&(browser_controller_request_t) {
+        .root_path = "C:/", .allow_directories = true,
+        .filter_cb = music_browser_filter, .select_cb = music_browser_select,
+        .return_route = SCREEN_PLAYER,
+    });
+}
+
+static bool music_browser_filter(const char * name, bool is_directory, void * user_data)
+{
+    LV_UNUSED(user_data);
+    return is_directory || audio_player_supports(name);
+}
+
+static void music_browser_select(const char * path, void * user_data)
+{
+    audio_res_t result;
+    LV_UNUSED(user_data);
+    result = audio_player_play(path);
+    if(result != AUDIO_RES_OK) {
+        LV_LOG_USER("player rejected (%s): %s", audio_res_str(result), path);
+        return;
+    }
+    ui_goto(SCREEN_PLAYER, true);
+}
+
+static void firmware_browser_select(const char * path, void * user_data)
+{
+    const char *name = path;
+    const char *p;
+    LV_UNUSED(user_data);
+    for(p = path; *p != '\0'; p++) if(*p == '/' || *p == ':') name = p + 1;
+    BootShared_Update((const uint8_t *)name);
 }
 
 /* 电源键回调：停止播放（电源语义未定，先借它给界面一个结束播放的入口） */
-static void power_cb(lv_event_t * e)
+static void power_cb(lv_obj_t * obj, void * user_data)
 {
-    LV_UNUSED(e);
+    LV_UNUSED(obj);
+    LV_UNUSED(user_data);
     (void)audio_player_stop();
 }
 
@@ -1018,320 +1117,6 @@ static lv_font_t * cjk_font_for_text(const char * text)
     }
 
     return has_cjk ? cjk_sc_14 : NULL;      /* 中日文用简体字形；纯ASCII交回XML里的字体 */
-}
-
-/* 文件浏览屏接线：取控件、从盘根目录开始扫描、把焦点放到首行 */
-static void browser_bind(lv_obj_t * screen)
-{
-    browser_list = lv_obj_find_by_name(screen, "browser_list");
-    browser_path = lv_obj_find_by_name(screen, "browser_path");
-    browser_menu_overlay = lv_obj_find_by_name(screen, "browser_menu_overlay");
-    browser_menu_name = lv_obj_find_by_name(screen, "browser_menu_name");
-    browser_menu_delete = lv_obj_find_by_name(screen, "browser_menu_delete");
-    browser_menu_source = NULL;
-    browser_menu_file[0] = '\0';
-    browser_menu_open = false;
-    if(browser_list != NULL) lv_obj_set_scroll_dir(browser_list, LV_DIR_VER);   /* 只竖向滚动 */
-    obj_set_hidden(browser_menu_overlay, true);
-    if(browser_menu_delete != NULL) {
-        lv_obj_add_event_cb(browser_menu_delete, browser_delete_cb, LV_EVENT_SHORT_CLICKED, NULL);
-        lv_obj_add_event_cb(browser_menu_delete, browser_menu_close_cb, LV_EVENT_LONG_PRESSED, NULL);
-    }
-
-    lv_snprintf(browser_dir, sizeof(browser_dir), "%s", BROWSER_ROOT_PATH);
-    browser_scan();
-    browser_focus_first();
-}
-
-/* 取文件名的扩展名（不含 '.'）：没有扩展名返回 NULL */
-static const char * file_ext(const char * name)
-{
-    const char * ext = NULL;
-    const char * p;
-    for(p = name; *p != '\0'; p++) {
-        if(*p == '.') ext = p + 1;
-    }
-    return (ext != NULL && *ext != '\0') ? ext : NULL;
-}
-
-/* 扩展名比较：大小写不敏感；right 需为小写（与音频解码器的 extension_equal 同一写法） */
-static bool ext_equal(const char * left, const char * right)
-{
-    while(*left != '\0' && *right != '\0') {
-        char a = *left++;
-        char b = *right++;
-        if(a >= 'A' && a <= 'Z') a = (char)(a + ('a' - 'A'));
-        if(a != b) return false;
-    }
-    return *left == '\0' && *right == '\0';
-}
-
-/* 文件行的图标：音频按解码器实际支持的格式判断（与音乐选曲同一套），
-   视频/图片按常见扩展名识别，识别不出才用通用文件图标；目录图标由调用处给。
-   字形都取自烘焙的 icon_12（LV_SYMBOL_* 的码位在 0xF000-0xF8FF） */
-static const char * browser_file_icon(const char * name)
-{
-    static const char * const video_ext[] = { "mp4", "m4v", "avi", "mkv", "mov", "mjpg", "mjpeg" };
-    static const char * const image_ext[] = { "jpg", "jpeg", "png", "bmp", "gif", "webp" };
-    const char * ext = file_ext(name);
-    uint32_t i;
-
-    if(audio_player_supports(name)) return LV_SYMBOL_AUDIO;
-    if(ext == NULL) return LV_SYMBOL_FILE;
-    for(i = 0; i < sizeof(video_ext) / sizeof(video_ext[0]); i++) {
-        if(ext_equal(ext, video_ext[i])) return LV_SYMBOL_VIDEO;
-    }
-    for(i = 0; i < sizeof(image_ext) / sizeof(image_ext[0]); i++) {
-        if(ext_equal(ext, image_ext[i])) return LV_SYMBOL_IMAGE;
-    }
-    return LV_SYMBOL_FILE;
-}
-
-/* 重建列表：上级目录、子目录和文件。文件应用显示全部文件，音乐选曲只显示支持格式。
-   行图标按类型给：目录 / 音频 / 视频 / 图片 / 通用文件。
-   目录项由驱动保证以 '/' 开头且已过滤掉 '.' 与 '..'（见 lvgl_fatfs.c 的 fs_dir_read） */
-static void browser_scan(void)
-{
-    if(browser_list == NULL) return;
-
-    lv_obj_clean(browser_list);
-    if(browser_path != NULL) {
-        lv_label_set_long_mode(browser_path, LV_LABEL_LONG_MODE_DOTS);    /* 路径过长时省略号截断 */
-        lv_label_set_text(browser_path, browser_dir);
-        lv_font_t * path_font = cjk_font_for_text(browser_dir);    /* 目录名含中文/日文时换字体 */
-        if(path_font != NULL) lv_obj_set_style_text_font(browser_path, path_font, 0);
-    }
-
-    if(lv_strcmp(browser_dir, BROWSER_ROOT_PATH) != 0) {
-        browser_add_row(LV_SYMBOL_UP, "..", BROWSER_ENTRY_PARENT);
-    }
-
-    lv_fs_dir_t dir;
-    if(lv_fs_dir_open(&dir, browser_dir) != LV_FS_RES_OK) {
-        browser_add_row(LV_SYMBOL_WARNING, "open failed", BROWSER_ENTRY_NONE);
-        return;
-    }
-
-    char fn[LV_FS_MAX_PATH_LENGTH];
-    while(lv_fs_dir_read(&dir, fn, sizeof(fn)) == LV_FS_RES_OK && fn[0] != '\0') {
-        bool is_dir = (fn[0] == '/');
-        const char * name = is_dir ? (fn + 1) : fn;
-        if(!is_dir && browser_mode == BROWSER_MODE_MUSIC && !audio_player_supports(name)) continue;
-
-        if(lv_obj_get_child_count(browser_list) >= BROWSER_ENTRY_MAX - 1) {
-            browser_add_row(LV_SYMBOL_LIST, "...", BROWSER_ENTRY_NONE);    /* 超出上限，只列前一部分 */
-            break;
-        }
-        browser_add_row(is_dir ? LV_SYMBOL_DIRECTORY : browser_file_icon(name), name,
-                        is_dir ? BROWSER_ENTRY_DIR : BROWSER_ENTRY_FILE);
-    }
-    lv_fs_dir_close(&dir);
-    if(lv_obj_get_child_count(browser_list) == 0u) {
-        browser_add_row(LV_SYMBOL_LIST, "empty", BROWSER_ENTRY_NONE);
-    }
-}
-
-/* 把焦点放到首行：切屏后旧屏焦点对象被删时会触发组重定位，这里显式定住 */
-static void browser_focus_first(void)
-{
-    if(browser_list == NULL) return;
-
-    lv_obj_t * first = lv_obj_get_child(browser_list, 0);
-    if(first != NULL) lv_group_focus_obj(first);
-}
-
-/* 追加一行：图标 + 名称（名称固定是第 2 个子项，取名字时按这个下标读），并记录行类型 */
-static lv_obj_t * browser_add_row(const char * icon, const char * text, browser_entry_kind_t kind)
-{
-    if(browser_list == NULL) return NULL;
-
-    uint32_t idx = lv_obj_get_child_count(browser_list);
-    if(idx >= BROWSER_ENTRY_MAX) return NULL;
-    browser_row_kind[idx] = (uint8_t)kind;
-
-    lv_obj_t * btn = lv_button_create(browser_list);
-    lv_obj_set_width(btn, lv_pct(100));
-    lv_obj_set_flex_flow(btn, LV_FLEX_FLOW_ROW);
-    lv_obj_set_style_flex_cross_place(btn, LV_FLEX_ALIGN_CENTER, 0);
-    lv_obj_set_style_pad_all(btn, 4, 0);
-    lv_obj_set_style_pad_column(btn, 6, 0);
-    lv_obj_set_style_radius(btn, 4, 0);
-    lv_obj_set_style_bg_color(btn, lv_color_hex(0x171717), LV_STATE_FOCUSED);
-    lv_obj_set_style_bg_opa(btn, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_bg_opa(btn, LV_OPA_COVER, LV_STATE_FOCUSED);
-    lv_obj_set_style_border_width(btn, 0, 0);
-    lv_obj_set_style_shadow_width(btn, 0, 0);
-    lv_obj_set_style_border_width(btn, 2, LV_STATE_FOCUSED);
-    lv_obj_set_style_border_color(btn, lv_color_hex(0x34d399), LV_STATE_FOCUSED);
-
-    lv_obj_t * ic = lv_label_create(btn);
-    lv_label_set_text(ic, icon);
-    /* 图标字形只在烘焙的 icon_14 里（LV_SYMBOL_* 的码位在 0xF000-0xF8FF 私有区），
-       文件名与图标是两个标签，互不影响 */
-    if(icon_14 != NULL) lv_obj_set_style_text_font(ic, icon_14, 0);
-    lv_obj_set_style_text_color(ic, lv_color_hex(0xa7f3d0), 0);
-
-    lv_obj_t * name = lv_label_create(btn);
-    lv_obj_set_flex_grow(name, 1);
-    lv_label_set_long_mode(name, LV_LABEL_LONG_MODE_DOTS);    /* 长文件名省略号截断 */
-    lv_label_set_text(name, text);
-    lv_obj_set_style_text_color(name, lv_color_hex(0xf5f5f5), 0);
-    /* 文件名含中文/日文时换成对应字形（假名走日文，其余走简体）；图标标签用 icon_12，不受影响 */
-    lv_font_t * name_font = cjk_font_for_text(text);
-    if(name_font != NULL) lv_obj_set_style_text_font(name, name_font, 0);
-
-    lv_obj_add_event_cb(btn, browser_entry_cb, LV_EVENT_SHORT_CLICKED, NULL);
-    lv_obj_add_event_cb(btn, browser_back_cb, LV_EVENT_LONG_PRESSED, NULL);
-    if(kind == BROWSER_ENTRY_FILE) {
-        lv_obj_add_event_cb(btn, browser_file_double_cb, LV_EVENT_DOUBLE_CLICKED, NULL);
-    }
-    return btn;
-}
-
-/* 取行内的文件名：行内固定为 图标(0) + 名称(1) 两个标签 */
-static const char * browser_row_name(lv_obj_t * btn)
-{
-    lv_obj_t * name = lv_obj_get_child(btn, 1);
-    return (name != NULL) ? lv_label_get_text(name) : "";
-}
-
-/* 进入子目录：browser_dir 恒以 '/' 结尾，直接追加"名字/" */
-static bool browser_dir_enter(const char * name)
-{
-    size_t len = lv_strlen(browser_dir);
-    if(len + lv_strlen(name) + 2 > sizeof(browser_dir)) return false;    /* 路径过长，忽略本次进入 */
-
-    lv_snprintf(browser_dir + len, sizeof(browser_dir) - len, "%s/", name);
-    return true;
-}
-
-/* 回到上一级目录：已在盘根目录时返回 false */
-static bool browser_dir_up(void)
-{
-    size_t len = lv_strlen(browser_dir);
-    if(len <= sizeof(BROWSER_ROOT_PATH) - 1) return false;    /* "C:/" 已是最上层 */
-
-    len--;                                                 /* 去掉末尾 '/' */
-    while(len > 0 && browser_dir[len - 1] != '/') len--;    /* 回退到上一级分隔符之后 */
-    browser_dir[len] = '\0';
-    return true;
-}
-
-/* 行回调：按行类型决定动作 */
-static void browser_entry_cb(lv_event_t * e)
-{
-    lv_obj_t * btn = lv_event_get_current_target_obj(e);
-    int32_t idx = lv_obj_get_index(btn);
-    audio_res_t result;
-    if(idx < 0 || idx >= BROWSER_ENTRY_MAX) return;
-
-    switch((browser_entry_kind_t)browser_row_kind[idx]) {
-        case BROWSER_ENTRY_PARENT:
-            if(browser_dir_up()) {
-                browser_scan();
-                browser_focus_first();
-            }
-            break;
-
-        case BROWSER_ENTRY_DIR:
-            if(browser_dir_enter(browser_row_name(btn))) {
-                browser_scan();
-                browser_focus_first();
-            }
-            break;
-
-        case BROWSER_ENTRY_FILE:
-            if(browser_mode != BROWSER_MODE_MUSIC) break;
-            lv_snprintf(browser_file, sizeof(browser_file), "%s%s", browser_dir, browser_row_name(btn));
-            result = audio_player_play(browser_file);
-            if(result != AUDIO_RES_OK) {
-                LV_LOG_USER("player rejected (%s): %s", audio_res_str(result), browser_file);
-            }
-            ui_goto(SCREEN_PLAYER, true);
-            break;
-
-        default:
-            break;
-    }
-}
-
-/* 菜单打开/关闭时同步焦点组成员：打开时把背景列表行移出焦点组，
-   旋钮只能在菜单内的控件之间遍历，不会跑到被遮住的文件行上；
-   关闭时按列表顺序把行加回去（lv_group_add_obj 自己会先移除，顺序即列表顺序） */
-static void browser_menu_focus_scope(bool menu_only)
-{
-    lv_group_t * group = lv_group_get_default();
-    uint32_t i;
-    uint32_t cnt;
-
-    if(group == NULL || browser_list == NULL) return;
-
-    cnt = lv_obj_get_child_count(browser_list);
-    for(i = 0; i < cnt; i++) {
-        lv_obj_t * row = lv_obj_get_child(browser_list, i);
-        if(row == NULL) continue;
-        if(menu_only) lv_group_remove_obj(row);
-        else lv_group_add_obj(group, row);
-    }
-}
-
-/* 文件应用中双击当前文件，呼出 XML 定义的上下文菜单。 */
-static void browser_file_double_cb(lv_event_t * e)
-{
-    lv_obj_t * btn = lv_event_get_current_target_obj(e);
-    if(browser_mode != BROWSER_MODE_FILES || browser_menu_overlay == NULL || btn == NULL) return;
-
-    browser_menu_source = btn;
-    lv_snprintf(browser_menu_file, sizeof(browser_menu_file), "%s%s", browser_dir, browser_row_name(btn));
-    if(browser_menu_name != NULL) lv_label_set_text(browser_menu_name, browser_row_name(btn));
-    obj_set_hidden(browser_menu_overlay, false);
-    browser_menu_open = true;
-    lv_obj_move_foreground(browser_menu_overlay);
-    browser_menu_focus_scope(true);     /* 先把文件行移出焦点组，再定焦到菜单里 */
-    if(browser_menu_delete != NULL) lv_group_focus_obj(browser_menu_delete);
-}
-
-static void browser_menu_close(bool restore_focus)
-{
-    obj_set_hidden(browser_menu_overlay, true);
-    browser_menu_open = false;
-    browser_menu_focus_scope(false);    /* 文件行重新参与焦点遍历 */
-    if(restore_focus && browser_menu_source != NULL) lv_group_focus_obj(browser_menu_source);
-    browser_menu_source = NULL;
-    browser_menu_file[0] = '\0';
-}
-
-static void browser_menu_close_cb(lv_event_t * e)
-{
-    LV_UNUSED(e);
-    browser_menu_close(true);
-}
-
-/* 删除只针对普通文件；目录删除以后需要单独设计确认与递归策略。 */
-static void browser_delete_cb(lv_event_t * e)
-{
-    LV_UNUSED(e);
-    if(browser_menu_file[0] == '\0') return;
-
-    if(lvgl_fatfs_remove(browser_menu_file)) {
-        browser_menu_close(false);
-        browser_scan();
-        browser_focus_first();
-    } else if(browser_menu_name != NULL) {
-		lv_label_set_text(browser_menu_name,
-					  "\xE5\x88\xA0\xE9\x99\xA4\xE5\xA4\xB1\xE8\xB4\xA5");
-    }
-}
-
-/* 文件浏览器长按返回；若菜单已打开则只关闭菜单。 */
-static void browser_back_cb(lv_event_t * e)
-{
-    LV_UNUSED(e);
-    if(browser_menu_open) {
-        browser_menu_close(true);
-        return;
-    }
-    ui_goto(browser_mode == BROWSER_MODE_MUSIC ? SCREEN_PLAYER : SCREEN_LAUNCHER, false);
 }
 
 /* 焦点变化监听：焦点在端点继续同方向滚动会回绕到另一端，此时视为遍历完成，切屏 */

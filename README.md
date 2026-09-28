@@ -13,3 +13,4 @@
 
 - MediaPlayer 应用工程：[H7_MediaPlayer_Apps](https://github.com/Pcb-yun/H7_MediaPlayer_Apps.git)
 - Bootloader 工程：[H7_Bootloader](https://github.com/Pcb-yun/H7_Bootloader.git)
+- ESP32-C6 协处理器工程：[ESP_Coprocessor](https://github.com/Pcb-yun/ESP_Coprocessor.git)

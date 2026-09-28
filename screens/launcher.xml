@@ -1,6 +1,7 @@
 <!-- launcher.xml - 2x2 应用选择器。页面结构、磁贴、图标和焦点样式全部由 XML 管理。 -->
 <screen>
 	<view
+		style_text_font="cjk_sc_14"
 		style_pad_all="0"
 		style_bg_color="0x000000"
 		style_bg_opa="100%"
@@ -45,8 +46,8 @@
 			</lv_button>
 		</lv_obj>
 
-		<!-- 第二页：视频、相机、系统监视器。 -->
-		<lv_obj name="launcher_page_1" hidden="true" width="100%" height="100%" style_pad_all="0" style_bg_opa="0" style_border_width="0">
+		<!-- 第二页：视频、相机、系统监视器。初始可见性由 C 侧 update_page() 设置，XML 不写 hidden（见 player.xml 注释） -->
+		<lv_obj name="launcher_page_1" width="100%" height="100%" style_pad_all="0" style_bg_opa="0" style_border_width="0">
 			<lv_button name="launcher_tile_4" x="16" y="14" width="92" height="92">
 				<style name="style_launcher_tile"/>
 				<style name="style_launcher_tile_focused" selector="focused"/>
@@ -72,7 +73,7 @@
 			<lv_obj x="0" y="0" width="12" height="6" style_radius="3" style_bg_color="0xffb2ce" style_bg_opa="100%" style_border_width="0" />
 			<lv_obj x="20" y="0" width="6" height="6" style_radius="3" style_bg_color="0xffffff" style_bg_opa="55%" style_border_width="0" />
 		</lv_obj>
-		<lv_obj name="launcher_dots_page_1" hidden="true" align="bottom_mid" y="-8" width="26" height="6" style_pad_all="0" style_bg_opa="0" style_border_width="0">
+		<lv_obj name="launcher_dots_page_1" align="bottom_mid" y="-8" width="26" height="6" style_pad_all="0" style_bg_opa="0" style_border_width="0">
 			<lv_obj x="0" y="0" width="6" height="6" style_radius="3" style_bg_color="0xffffff" style_bg_opa="55%" style_border_width="0" />
 			<lv_obj x="14" y="0" width="12" height="6" style_radius="3" style_bg_color="0xffb2ce" style_bg_opa="100%" style_border_width="0" />
 		</lv_obj>

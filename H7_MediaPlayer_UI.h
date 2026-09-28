@@ -23,6 +23,20 @@ extern "C" {
  *      TYPEDEFS
  **********************/
 
+typedef enum {
+    H7_UI_WIFI_OFF = 0,
+    H7_UI_WIFI_ON,
+    H7_UI_WIFI_CONNECTING,
+    H7_UI_WIFI_CONNECTED,
+} h7_ui_wifi_state_t;
+
+typedef struct {
+    h7_ui_wifi_state_t state;
+    int8_t rssi;
+} h7_ui_wifi_status_t;
+
+typedef bool (*h7_ui_wifi_status_provider_t)(h7_ui_wifi_status_t * status);
+
 /**********************
  * GLOBAL VARIABLES
  **********************/
@@ -35,6 +49,13 @@ extern "C" {
  * Initialize the component library
  */
 void H7_MediaPlayer_UI_init(const char * asset_path);
+
+/**
+ * 注册非阻塞的 Wi-Fi 状态提供者。回调只能读取缓存，不应执行同步网络请求。
+ * 未注册时首页显示“已关闭”；偶发读取失败时保留上一次显示。
+ */
+void H7_MediaPlayer_UI_set_wifi_status_provider(
+    h7_ui_wifi_status_provider_t provider);
 
 /**
  * 切换到另一块屏幕：主屏↔播放器循环，fade 过渡，旧屏在过渡结束后删除。

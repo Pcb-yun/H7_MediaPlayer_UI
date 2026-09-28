@@ -1,6 +1,6 @@
 <!-- app_placeholder.xml - 未接入业务的应用统一占位页。 -->
 <screen>
-	<view style_bg_color="0xffffff" style_bg_opa="100%" style_bg_image_src="bochi" style_bg_image_tiled="false">
+	<view style_text_font="cjk_sc_14" style_bg_color="0xffffff" style_bg_opa="100%" style_bg_image_src="bochi" style_bg_image_tiled="false">
 		<lv_button
 			name="app_placeholder_back"
 			align="center"

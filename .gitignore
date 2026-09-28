@@ -14,10 +14,8 @@ compile_commands.json
 lv_conf.h
 
 # 编译产物
-fonts/*.c
-images/*.c
-screens/*.c
-screens/*.h
+*_gen.*
+*_data.*
 
 # 编译中间产物
 *.o

@@ -6,6 +6,7 @@
      注意：本屏至少保留一个可聚焦控件，否则编码器无法移动焦点，边界切屏也不会触发 -->
 <screen>
 	<view
+		style_text_font="cjk_sc_14"
 		style_pad_all="10"
 		style_bg_color="0xffffff"
 		style_bg_opa="100%"
@@ -40,7 +41,7 @@
 				style_border_width="0"
 				style_shadow_width="0"
 				style_border_width-focused="2"
-				style_border_color-focused="0x3b82f6"
+				style_border_color-focused="0xff72b6"
 			>
 				<lv_image src="power" />
 			</lv_button>
@@ -56,7 +57,7 @@
 				style_border_width="0"
 				style_shadow_width="0"
 				style_border_width-focused="2"
-				style_border_color-focused="0x3b82f6"
+				style_border_color-focused="0xff72b6"
 			>
 				<lv_image src="playlist" />
 			</lv_button>
@@ -156,7 +157,7 @@
 		<lv_obj
 			name="progress_row"
 			align="bottom_mid"
-			y="-32"
+			y="-27"
 			width="100%"
 			height="content"
 			flex_flow="row"
@@ -182,10 +183,11 @@
 				style_pad_all="0"
 				style_shadow_width="0"
 				style_outline_width="2"
-				style_outline_color="0x3b82f6"
+				style_outline_color="0xff72b6"
 				style_outline_pad="1"
 				style_outline_opa="0"
 				style_outline_opa-focused="100%"
+				width="158"
 			>
 				<lv_obj
 					name="progress_fill"
@@ -193,21 +195,24 @@
 					height="100%"
 					align="left_mid"
 					style_radius="3"
-					style_bg_color="0x3b82f6"
+					style_bg_color="0xff72b6"
 					style_bg_opa="100%"
 					style_border_width="0"
 				/>
 			</lv_button>
 
-			<!-- 播放时间：已播 / 总时长，文本由 H7_MediaPlayer_UI.c 刷新。
-			     固定宽度：比例字体数字宽度不等（'1' 比 '0' 窄），若宽度自适应，左侧进度条会随
-			     时间数字长短伸缩 -->
+			<!-- 播放时间：剩余时间（-MM:SS），播放结束归零显示 00:00，文本由 H7_MediaPlayer_UI.c 刷新。
+			     固定宽度 + 右对齐：数字宽度不等，若宽度自适应，左侧进度条会随时间数字长短伸缩；
+			     宽度按最宽文本（-88:88 ≈ 53 px）取，只留少量余量，剩下的宽度都给进度条，
+			     固定宽度还能让时间右端始终与控制栏右端对齐 -->
 			<lv_label
 				name="progress_time"
-				text="00:00 / 00:00"
-				width="72"
-				style_text_font="montserrat_10"
+				text="-00:00"
+				width="47"
+				style_text_align="right"
+				style_text_font="cjk_sc_14"
 				style_text_color="0x000000"
+				height="20"
 			/>
 		</lv_obj>
 
@@ -240,7 +245,7 @@
 				style_border_width="0"
 				style_shadow_width="0"
 				style_border_width-focused="2"
-				style_border_color-focused="0x3b82f6"
+				style_border_color-focused="0xff72b6"
 			>
 				<lv_image src="volume_high" />
 			</lv_button>
@@ -255,7 +260,7 @@
 				style_border_width="0"
 				style_shadow_width="0"
 				style_border_width-focused="2"
-				style_border_color-focused="0x3b82f6"
+				style_border_color-focused="0xff72b6"
 			>
 				<lv_image src="prev" />
 			</lv_button>
@@ -271,7 +276,7 @@
 				style_border_width="0"
 				style_shadow_width="0"
 				style_border_width-focused="2"
-				style_border_color-focused="0x3b82f6"
+				style_border_color-focused="0xff72b6"
 			>
 				<lv_image name="icon_playstate" src="pause" />
 			</lv_button>
@@ -286,7 +291,7 @@
 				style_border_width="0"
 				style_shadow_width="0"
 				style_border_width-focused="2"
-				style_border_color-focused="0x3b82f6"
+				style_border_color-focused="0xff72b6"
 			>
 				<lv_image src="next" />
 			</lv_button>
@@ -302,7 +307,7 @@
 				style_border_width="0"
 				style_shadow_width="0"
 				style_border_width-focused="2"
-				style_border_color-focused="0x3b82f6"
+				style_border_color-focused="0xff72b6"
 			>
 				<lv_image name="icon_repeat" src="queue" />
 			</lv_button>
@@ -327,7 +332,7 @@
 			style_bg_color="0xffffff"
 			style_bg_opa="40%"
 			style_border_width="2"
-			style_border_color="0x3b82f6"
+			style_border_color="0xff72b6"
 			style_border_opa="50%"
 			style_pad_all="0"
 		>
@@ -337,7 +342,7 @@
 				width="20"
 				height="0"
 				style_radius="4"
-				style_bg_color="0x3b82f6"
+				style_bg_color="0xff72b6"
 				style_bg_opa="100%"
 				style_border_width="0"
 			/>

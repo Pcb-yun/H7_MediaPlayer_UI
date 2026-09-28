@@ -19,5 +19,11 @@
 # =============================================================================
 
 list(APPEND LV_EDITOR_PROJECT_SOURCES
-    # ${CMAKE_CURRENT_LIST_DIR}/my_file.c
+    ${CMAKE_CURRENT_LIST_DIR}/ui/ui_focus.c
+    ${CMAKE_CURRENT_LIST_DIR}/ui/ui_router.c
+    ${CMAKE_CURRENT_LIST_DIR}/apps/browser/browser_backend.c
+    ${CMAKE_CURRENT_LIST_DIR}/apps/browser/browser_controller.c
+    ${CMAKE_CURRENT_LIST_DIR}/apps/launcher/launcher_controller.c
+    ${CMAKE_CURRENT_LIST_DIR}/apps/settings/settings_controller.c
+    ${CMAKE_CURRENT_LIST_DIR}/apps/system_monitor/system_monitor.c
 )
