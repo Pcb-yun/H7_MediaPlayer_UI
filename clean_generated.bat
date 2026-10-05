@@ -22,6 +22,7 @@ rem    源文件列表       file_list_gen.cmake
 rem    导出构建脚本     CMakeLists.txt（只删它，user_config.cmake 不动）
 rem    预览运行时缓存   preview-bin 目录
 rem    预览构建产物     preview-build 目录
+rem    工程构建产物     build 目录（CMake + VS 生成，可重新配置恢复）
 rem    编辑器缓存       .cache.json
 rem
 rem  不删（这些是工程源或自己写的东西）：
@@ -69,8 +70,12 @@ if exist "%ROOT%preview-build\" (
 	set /a total+=1
 )
 
-rem 想连工程构建产物一起清掉，把下面一行的 rem 去掉即可
-rem if exist "%ROOT%build\" ( rd /s /q "%ROOT%build" ^& echo   [目录] build\ ^& set /a total+=1 )
+rem ---- 6) 工程构建产物（整个目录） ----
+if exist "%ROOT%build\" (
+	rd /s /q "%ROOT%build"
+	echo   [目录] build\
+	set /a total+=1
+)
 
 echo.
 echo 完成：共删除 %total% 项。回编辑器点 Generate 可重新生成。

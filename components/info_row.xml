@@ -5,10 +5,10 @@
 		<prop name="value" type="string" default="" />
 		<prop name="value_name" type="string" default="info_value" />
 	</api>
-	<view extends="lv_button" width="100%" height="content" flex_flow="column" style_text_font="cjk_sc_14" style_pad_all="10" style_pad_row="5">
+	<view extends="lv_button" width="100%" height="content" flex_flow="column" style_text_font="cjk_sc_16" style_pad_all="10" style_pad_row="5">
 		<style name="style_settings_row" />
 		<style name="style_settings_row_focused" selector="focused" />
-		<lv_label width="100%" height="content" text="$title" long_mode="wrap" style_text_font="cjk_sc_14" style_text_color="0x9ca3af" />
-		<lv_label name="$value_name" width="100%" height="content" text="$value" long_mode="wrap" style_text_font="cjk_sc_14" style_text_color="0xffffff" />
+		<lv_label width="100%" height="content" text="$title" long_mode="wrap" style_text_font="cjk_sc_16" style_text_color="0x9ca3af" />
+		<lv_label name="$value_name" width="100%" height="content" text="$value" long_mode="wrap" style_text_font="cjk_sc_16" style_text_color="0xffffff" />
 	</view>
 </component>

@@ -1,6 +1,6 @@
 <!-- browser.xml - 黑色列表式文件浏览器。目录内容由 C 动态填充，菜单和全局进度条结构由 XML 管理。 -->
 <screen>
-	<view style_text_font="cjk_sc_14" style_pad_all="8" style_bg_color="0x1c1c1c" style_bg_opa="100%">
+	<view style_text_font="cjk_sc_16" style_pad_all="8" style_bg_color="0x1c1c1c" style_bg_opa="100%">
 		<lv_obj
 			name="browser_panel"
 			align="center"
@@ -13,7 +13,7 @@
 			style_bg_opa="100%"
 			style_border_width="0"
 		>
-			<lv_label name="browser_path" width="100%" text="C:/" long_mode="dots" style_text_font="cjk_sc_14" style_text_color="0xa7f3d0" />
+			<lv_label name="browser_path" width="100%" text="C:/" long_mode="dots" style_text_font="cjk_sc_16" style_text_color="0xa7f3d0" />
 
 			<!-- 列表使用动态数据窗口；右侧进度条由 C 按全目录索引计算，不使用 LVGL 局部滚动条。 -->
 			<lv_obj
@@ -62,7 +62,7 @@
 
 		<!-- 普通文件单击后显示上下文菜单。取消为默认选项，后续操作继续添加在此菜单中。
 		     菜单打开期间 C 侧会把背景列表行移出焦点组，旋钮只在本菜单内遍历。
-		     初始隐藏由 C 侧 bind 时设置，XML 不写 hidden（见 player.xml 注释） -->
+		     初始隐藏由 C 侧 bind 时设置，XML 不写 hidden -->
 		<lv_obj
 			name="browser_menu_overlay"
 			width="100%"
@@ -93,7 +93,7 @@
 					width="100%"
 					long_mode="dots"
 					style_text_align="center"
-					style_text_font="cjk_sc_14"
+					style_text_font="cjk_sc_16"
 					style_text_color="0xe5e5e5"
 				/>
 				<lv_button
@@ -103,12 +103,9 @@
 					style_radius="7"
 					style_bg_color="0x303030"
 					style_bg_opa="100%"
-					style_border_width="2"
-					style_border_color="0xff72b6"
-					style_border_opa="0"
-					style_border_opa-focused="100%"
+					style_border_width="0"
 				>
-					<lv_label text="取消" align="center" style_text_font="cjk_sc_14" style_text_color="0xffffff" />
+					<lv_label text="取消" align="center" style_text_font="cjk_sc_16" style_text_color="0xffffff" />
 				</lv_button>
 				<lv_button
 					name="browser_menu_delete"
@@ -117,12 +114,9 @@
 					style_radius="7"
 					style_bg_color="0x991b1b"
 					style_bg_opa="100%"
-					style_border_width="2"
-					style_border_color="0xff72b6"
-					style_border_opa="0"
-					style_border_opa-focused="100%"
+					style_border_width="0"
 				>
-					<lv_label text="删除" align="center" style_text_font="cjk_sc_14" style_text_color="0xffffff" />
+					<lv_label text="删除" align="center" style_text_font="cjk_sc_16" style_text_color="0xffffff" />
 				</lv_button>
 			</lv_obj>
 		</lv_obj>

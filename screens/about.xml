@@ -1,6 +1,6 @@
 <!-- 关于页面：每个信息栏都是可聚焦 Component，列表可继续纵向扩展。 -->
 <screen>
-	<view style_text_font="cjk_sc_14" style_pad_all="0" style_bg_color="0x080808" style_bg_opa="100%">
+	<view style_text_font="cjk_sc_16" style_pad_all="0" style_bg_color="0x080808" style_bg_opa="100%">
 		<page_header name="about_header" x="0" y="0" title="关于" />
 		<lv_obj
 			name="about_list"
@@ -28,13 +28,13 @@
 			>
 				<style name="style_settings_row" />
 				<style name="style_settings_row_focused" selector="focused" />
-				<lv_image src="app_settings" width="38" height="38" inner_align="contain" />
+				<lv_image src="app_settings" width="44" height="44" inner_align="contain" />
 				<lv_label
 					width="148"
 					height="content"
-					text="基于 H7 的多媒体玩具"
+					text="H7 多媒体玩具"
 					long_mode="wrap"
-					style_text_font="cjk_sc_14"
+					style_text_font="cjk_sc_16"
 					style_text_color="0xf3f4f6"
 				/>
 			</lv_button>

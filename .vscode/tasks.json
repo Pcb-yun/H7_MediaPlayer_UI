@@ -13,7 +13,7 @@
       "label": "CMake build",
       "type": "shell",
       "command": "cmake",
-      "args": ["--build", "build", "-j"],
+      "args": ["--build", "build", "-j", "--config", "Debug"],
       "options": { "cwd": "${workspaceFolder}" },
       "dependsOn": "Configure",
       "group": { "kind": "build", "isDefault": true },

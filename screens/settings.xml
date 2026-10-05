@@ -1,16 +1,32 @@
-<!-- 设置应用：Screen 只组合 Components，业务动作由 settings_controller 处理。 -->
+<!-- 设置应用：Screen 只组合 Components，业务动作由 UI_src 设置模块处理 -->
 <screen>
-	<view style_text_font="cjk_sc_14" style_pad_all="0" style_bg_color="0x080808" style_bg_opa="100%">
+	<view style_text_font="cjk_sc_16" style_pad_all="0" style_bg_color="0x080808" style_bg_opa="100%">
 		<page_header name="settings_header" x="0" y="0" title="设置" />
-		<lv_obj name="settings_list" x="0" y="34" width="100%" height="206" flex_flow="column" style_pad_left="8" style_pad_right="8" style_pad_top="5" style_pad_bottom="8" style_pad_row="4" style_bg_opa="0" style_border_width="0">
-			<lv_label text="显示" width="100%" height="18" style_text_font="cjk_sc_14" style_text_color="0x9ca3af" />
-			<setting_row name="settings_brightness" icon="setting_brightness" title="亮度" value="50%  ›" />
-			<setting_row name="settings_orientation" icon="setting_orientation" title="方向" value="0°  ›" />
-			<lv_label text="系统" width="100%" height="18" style_text_font="cjk_sc_14" style_text_color="0x9ca3af" />
-			<setting_row name="settings_reboot" icon="setting_reboot" title="重启" value="›" />
-			<setting_row name="settings_local_update" icon="setting_local_update" title="本地更新" value="›" />
-			<lv_label text="关于" width="100%" height="18" style_text_font="cjk_sc_14" style_text_color="0x9ca3af" />
-			<setting_row name="settings_about" icon="setting_about" title="关于本机" value="›" />
+		<lv_obj
+			name="settings_list"
+			x="0"
+			y="34"
+			width="100%"
+			height="206"
+			flex_flow="column"
+			style_pad_left="8"
+			style_pad_right="8"
+			style_pad_top="5"
+			style_pad_bottom="8"
+			style_pad_row="4"
+			style_bg_opa="0"
+			style_border_width="0"
+		>
+			<lv_label text="网络" width="100%" height="18" style_text_font="cjk_sc_16" style_text_color="0x9ca3af" />
+			<setting_row name="settings_wifi" icon="setting_wifi" title="Wi-Fi" />
+			<lv_label text="显示" width="100%" height="18" style_text_font="cjk_sc_16" style_text_color="0x9ca3af" />
+			<setting_row name="settings_brightness" icon="setting_brightness" title="亮度" value="50%" />
+			<setting_row name="settings_orientation" icon="setting_orientation" title="方向" value="0°" />
+			<lv_label text="系统" width="100%" height="18" style_text_font="cjk_sc_16" style_text_color="0x9ca3af" />
+			<setting_row name="settings_reboot" icon="setting_reboot" title="重启" />
+			<setting_row name="settings_local_update" icon="setting_local_update" title="本地更新" />
+			<lv_label text="关于" width="100%" height="18" style_text_font="cjk_sc_16" style_text_color="0x9ca3af" />
+			<setting_row name="settings_about" icon="setting_about" title="关于本机" />
 		</lv_obj>
 	</view>
 </screen>

@@ -35,28 +35,29 @@ LV_USE_FS_STDIO         1
 LV_FS_STDIO_LETTER      'A'
 
 # Asset decoders commonly produced by the Editor.
+# LODEPNG: 界面背景/图标均为 PNG 文件, 运行时从 A: 盘加载
+# TINY_TTF: ui_font.c 运行时加载 fonts/*.ttf, 且 montserrat_16 作为回退字体
 LV_USE_LODEPNG          1
 LV_USE_TINY_TTF         1
 LV_TINY_TTF_FILE_SUPPORT 1
 
-# Widgets used by the examples that are off by default in lv_conf_template.h.
-LV_USE_QRCODE           1
-
-# A handful of built-in fonts.
-LV_FONT_MONTSERRAT_12   1
+# 界面仅使用编译进固件的自定义字体(cjk_sc_16/home_time_44/time_14),
+# 仅保留 montserrat_16 作为默认主题字体与 TTF 拉丁回退
 LV_FONT_MONTSERRAT_16   1
-LV_FONT_MONTSERRAT_24   1
 
-# 默认字体必须与固件 lv_conf.h 的 LV_FONT_DEFAULT 一致，否则模拟器与设备字号不同
-LV_FONT_DEFAULT         LV_FONT_DEFAULT_MONTSERRAT_12
+# 烘焙字体位图索引超过 20 位, 与固件 lv_conf.h 保持一致开启大字体格式
+LV_FONT_FMT_TXT_LARGE   1
 
-# Show the FPS / CPU overlay. Set to 1 to enable.
-LV_USE_PERF_MONITOR     0
+# 默认字体: v9.5.0 模板直接使用字体符号(无 v9.6 的 LV_FONT_DEFAULT_* 宏),
+# 与固件 CJK 16 字体的拉丁回退 lv_font_montserrat_16 保持一致
+LV_FONT_DEFAULT         &lv_font_montserrat_16
+
+# Show LVGL's built-in FPS / CPU overlay on the black baseline screen.
+LV_USE_PERF_MONITOR     1
 
 # lv_obj name is required by the C code exported from the Editor.
 LV_USE_OBJ_NAME         1
 
-
-# To support translations
-LV_USE_TRANSLATION 1
-
+# 生成代码(H7_MediaPlayer_UI_gen.c)根据 translations.xml 调用
+# lv_translation_add_static / lv_translation_set_language
+LV_USE_TRANSLATION      1

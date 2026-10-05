@@ -1,0 +1,43 @@
+<!-- Wi-Fi 页面, 网络扫描结果由 UI_src/settings/ui_wifi.c 动态追加 -->
+<screen>
+	<view
+		style_text_font="cjk_sc_16"
+		style_pad_all="0"
+		style_bg_color="0x080808"
+		style_bg_opa="100%"
+		scrollable="false"
+	>
+		<page_header name="wifi_header" x="0" y="0" title="Wi-Fi" />
+		<lv_obj
+			name="wifi_list"
+			x="0"
+			y="34"
+			width="100%"
+			height="206"
+			flex_flow="column"
+			style_pad_left="8"
+			style_pad_right="8"
+			style_pad_top="5"
+			style_pad_bottom="8"
+			style_pad_row="4"
+			style_bg_opa="0"
+			style_border_width="0"
+		>
+			<setting_row name="wifi_search" icon="" title="搜索网络" />
+			<lv_label
+				text="可用网络"
+				width="100%"
+				height="23"
+				style_text_font="cjk_sc_16"
+				style_text_color="0x9ca3af"
+			/>
+			<lv_label
+				name="wifi_hint"
+				text="点击搜索网络"
+				width="100%"
+				style_text_font="cjk_sc_16"
+				style_text_color="0x9ca3af"
+			/>
+		</lv_obj>
+	</view>
+</screen>

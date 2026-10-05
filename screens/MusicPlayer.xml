@@ -1,0 +1,581 @@
+<!-- MusicPlayer.xml - MusicPlayer 四分页播放器界面 -->
+<screen>
+	<view
+		name="music_player_root"
+		style_text_font="cjk_sc_16"
+		style_pad_all="0"
+		style_bg_color="0x080b16"
+		style_bg_opa="100%"
+	>
+		<!-- 背景图片, 后续优先读取缓存bin, 缓存缺失时使用默认C数组 -->
+		<lv_image
+			name="music_player_background_image"
+			src="ahq"
+			x="0"
+			y="0"
+			width="240"
+			height="240"
+			inner_align="cover"
+			scrollable="false"
+		/>
+
+		<!-- 背景遮罩, 背景与前景封面使用独立图片源 -->
+		<lv_obj
+			name="music_player_background_mask"
+			x="0"
+			y="0"
+			width="240"
+			height="240"
+			style_pad_all="0"
+			style_bg_color="0x080b16"
+			style_bg_opa="65%"
+			style_border_width="0"
+		/>
+
+		<!-- 固定尺寸页面容器, 四个页面在同一位置分页显示 -->
+		<lv_obj
+			name="music_player_page_host"
+			x="0"
+			y="0"
+			width="240"
+			height="240"
+			style_pad_all="0"
+			style_bg_opa="0"
+			style_border_width="0"
+		>
+			<!-- 第 1 页, 默认显示, 封面和基础播放控制 -->
+			<lv_obj
+				name="music_player_page_cover"
+				x="0"
+				y="0"
+				width="100%"
+				height="100%"
+				style_pad_all="0"
+				style_bg_opa="0"
+				style_border_width="0"
+			>
+				<!-- 后续将此图片源替换为歌曲封面, 无封面时使用默认图片 -->
+				<!-- 封面源图大于显示尺寸会被缩放, 而缩放图不走自身圆角裁剪, 故圆角由外层容器裁剪 -->
+				<lv_obj
+					name="music_player_cover_image"
+					width="112"
+					height="112"
+					align="top_mid"
+					y="8"
+					clickable="true"
+					scrollable="false"
+					style_pad_all="0"
+					style_bg_opa="0"
+					style_border_width="0"
+					style_radius="12"
+					style_clip_corner="true"
+				>
+					<style name="style_mp_widget_focused" selector="focused" />
+					<lv_image src="song" width="100%" height="100%" inner_align="cover" />
+				</lv_obj>
+
+				<lv_label
+					name="music_player_cover_title"
+					text="未在播放"
+					align="top_mid"
+					y="120"
+					width="220"
+					long_mode="dots"
+					style_text_align="center"
+					style_text_color="0xffffff"
+				/>
+				<lv_label
+					name="music_player_cover_artist"
+					text="--"
+					align="top_mid"
+					y="139"
+					width="220"
+					long_mode="dots"
+					style_text_align="center"
+					style_text_color="0xcbd5e1"
+				/>
+
+				<lv_obj
+					name="music_player_cover_progress_track"
+					x="9"
+					y="162"
+					width="222"
+					height="5"
+					clickable="true"
+					scrollable="false"
+					style_radius="3"
+					style_pad_all="0"
+					style_bg_color="0x64748b"
+					style_bg_opa="80%"
+					style_border_width="0"
+				>
+					<style name="style_mp_widget_focused" selector="focused" />
+					<lv_obj
+						name="music_player_cover_progress_fill"
+						align="left_mid"
+						width="0"
+						height="100%"
+						style_radius="3"
+						style_bg_color="0xff72b6"
+						style_bg_opa="100%"
+						style_border_width="0"
+					/>
+				</lv_obj>
+				<lv_label
+					name="music_player_cover_time_current"
+					text="00:00"
+					x="9"
+					y="170"
+					width="80"
+					style_text_font="time_14"
+					style_text_color="0xe5e7eb"
+				/>
+				<lv_label
+					name="music_player_cover_time_total"
+					text="00:00"
+					x="151"
+					y="170"
+					width="80"
+					style_text_align="right"
+					style_text_font="time_14"
+					style_text_color="0xe5e7eb"
+				/>
+
+				<lv_button
+					name="music_player_cover_previous"
+					x="48"
+					y="184"
+					width="40"
+					height="40"
+					scrollable="false"
+					style_radius="20"
+					style_bg_color="0x111827"
+					style_bg_opa="82%"
+					style_border_width="1"
+					style_border_color="0x64748b"
+				>
+					<style name="style_mp_widget_focused" selector="focused" />
+					<lv_image src="prev" align="center" />
+				</lv_button>
+				<lv_button
+					name="music_player_cover_playpause"
+					x="96"
+					y="180"
+					width="48"
+					height="48"
+					scrollable="false"
+					style_radius="24"
+					style_bg_color="0x111827"
+					style_bg_opa="88%"
+					style_border_width="1"
+					style_border_color="0x64748b"
+				>
+					<style name="style_mp_widget_focused" selector="focused" />
+					<lv_image name="music_player_cover_playpause_icon" src="play" align="center" />
+				</lv_button>
+				<lv_button
+					name="music_player_cover_next"
+					x="152"
+					y="184"
+					width="40"
+					height="40"
+					scrollable="false"
+					style_radius="20"
+					style_bg_color="0x111827"
+					style_bg_opa="82%"
+					style_border_width="1"
+					style_border_color="0x64748b"
+				>
+					<style name="style_mp_widget_focused" selector="focused" />
+					<lv_image src="next" align="center" />
+				</lv_button>
+			</lv_obj>
+
+			<!-- 第 2 页, 默认收起, 沉浸式歌词, 页面整体作为唯一焦点项 -->
+			<lv_obj
+				name="music_player_page_lyrics"
+				x="0"
+				y="0"
+				width="100%"
+				height="100%"
+				clickable="true"
+				scrollable="false"
+				style_pad_all="0"
+				style_bg_color="0x050711"
+				style_bg_opa="42%"
+				style_border_width="0"
+			>
+				<style name="style_mp_page_focused" selector="focused" />
+				<lv_label
+					name="music_player_lyric_previous_2"
+					text=""
+					x="10"
+					y="20"
+					width="220"
+					height="46"
+					long_mode="wrap"
+					style_text_align="center"
+					style_text_color="0x94a3b8"
+				/>
+				<lv_label
+					name="music_player_lyric_previous_1"
+					text=""
+					x="10"
+					y="59"
+					width="220"
+					height="46"
+					long_mode="wrap"
+					style_text_align="center"
+					style_text_color="0xcbd5e1"
+				/>
+				<lv_label
+					name="music_player_lyric_current"
+					text="暂无歌词"
+					x="8"
+					y="98"
+					width="224"
+					height="46"
+					long_mode="wrap"
+					style_text_align="center"
+					style_text_color="0xffffff"
+					style_text_opa="100%"
+				/>
+				<lv_label
+					name="music_player_lyric_next_1"
+					text=""
+					x="10"
+					y="139"
+					width="220"
+					height="46"
+					long_mode="wrap"
+					style_text_align="center"
+					style_text_color="0xcbd5e1"
+				/>
+				<lv_label
+					name="music_player_lyric_next_2"
+					text=""
+					x="10"
+					y="166"
+					width="220"
+					height="46"
+					long_mode="wrap"
+					style_text_align="center"
+					style_text_color="0x94a3b8"
+				/>
+			</lv_obj>
+
+			<!-- 第 3 页, 默认收起, 纯频谱刷新, 页面整体作为唯一焦点项 -->
+			<lv_obj
+				name="music_player_page_spectrum"
+				x="0"
+				y="0"
+				width="100%"
+				height="100%"
+				clickable="true"
+				scrollable="false"
+				style_pad_all="0"
+				style_bg_color="0x080b16"
+				style_bg_opa="24%"
+				style_border_width="0"
+			>
+				<style name="style_mp_page_focused" selector="focused" />
+				<lv_label
+					name="music_player_spectrum_title"
+					text="未在播放"
+					align="top_mid"
+					y="8"
+					width="220"
+					long_mode="dots"
+					style_text_align="center"
+					style_text_color="0xffffff"
+				/>
+				<lv_label
+					name="music_player_spectrum_artist"
+					text="--"
+					align="top_mid"
+					y="27"
+					width="220"
+					long_mode="dots"
+					style_text_align="center"
+					style_text_color="0xcbd5e1"
+				/>
+
+				<!-- 频谱柱仅作为接口占位, 后续由用户代码更新各柱高度 -->
+				<lv_obj
+					name="music_player_spectrum_area"
+					x="14"
+					y="49"
+					width="212"
+					height="101"
+					style_pad_all="0"
+					style_bg_opa="0"
+					style_border_width="0"
+				>
+					<lv_obj
+						name="music_player_spectrum_bar_00"
+						x="0"
+						align="bottom_left"
+						width="8"
+						height="24"
+						style_radius="4"
+						style_bg_color="0xff72b6"
+						style_border_width="0"
+					/>
+					<lv_obj
+						name="music_player_spectrum_bar_01"
+						x="12"
+						align="bottom_left"
+						width="8"
+						height="45"
+						style_radius="4"
+						style_bg_color="0xff72b6"
+						style_border_width="0"
+					/>
+					<lv_obj
+						name="music_player_spectrum_bar_02"
+						x="24"
+						align="bottom_left"
+						width="8"
+						height="33"
+						style_radius="4"
+						style_bg_color="0xff72b6"
+						style_border_width="0"
+					/>
+					<lv_obj
+						name="music_player_spectrum_bar_03"
+						x="36"
+						align="bottom_left"
+						width="8"
+						height="58"
+						style_radius="4"
+						style_bg_color="0xff72b6"
+						style_border_width="0"
+					/>
+					<lv_obj
+						name="music_player_spectrum_bar_04"
+						x="48"
+						align="bottom_left"
+						width="8"
+						height="76"
+						style_radius="4"
+						style_bg_color="0xff72b6"
+						style_border_width="0"
+					/>
+					<lv_obj
+						name="music_player_spectrum_bar_05"
+						x="60"
+						align="bottom_left"
+						width="8"
+						height="49"
+						style_radius="4"
+						style_bg_color="0xff72b6"
+						style_border_width="0"
+					/>
+					<lv_obj
+						name="music_player_spectrum_bar_06"
+						x="72"
+						align="bottom_left"
+						width="8"
+						height="38"
+						style_radius="4"
+						style_bg_color="0xff72b6"
+						style_border_width="0"
+					/>
+					<lv_obj
+						name="music_player_spectrum_bar_07"
+						x="84"
+						align="bottom_left"
+						width="8"
+						height="66"
+						style_radius="4"
+						style_bg_color="0xff72b6"
+						style_border_width="0"
+					/>
+					<lv_obj
+						name="music_player_spectrum_bar_08"
+						x="96"
+						align="bottom_left"
+						width="8"
+						height="52"
+						style_radius="4"
+						style_bg_color="0xff72b6"
+						style_border_width="0"
+					/>
+					<lv_obj
+						name="music_player_spectrum_bar_09"
+						x="108"
+						align="bottom_left"
+						width="8"
+						height="82"
+						style_radius="4"
+						style_bg_color="0xff72b6"
+						style_border_width="0"
+					/>
+					<lv_obj
+						name="music_player_spectrum_bar_10"
+						x="120"
+						align="bottom_left"
+						width="8"
+						height="61"
+						style_radius="4"
+						style_bg_color="0xff72b6"
+						style_border_width="0"
+					/>
+					<lv_obj
+						name="music_player_spectrum_bar_11"
+						x="132"
+						align="bottom_left"
+						width="8"
+						height="44"
+						style_radius="4"
+						style_bg_color="0xff72b6"
+						style_border_width="0"
+					/>
+					<lv_obj
+						name="music_player_spectrum_bar_12"
+						x="144"
+						align="bottom_left"
+						width="8"
+						height="70"
+						style_radius="4"
+						style_bg_color="0xff72b6"
+						style_border_width="0"
+					/>
+					<lv_obj
+						name="music_player_spectrum_bar_13"
+						x="156"
+						align="bottom_left"
+						width="8"
+						height="37"
+						style_radius="4"
+						style_bg_color="0xff72b6"
+						style_border_width="0"
+					/>
+					<lv_obj
+						name="music_player_spectrum_bar_14"
+						x="168"
+						align="bottom_left"
+						width="8"
+						height="55"
+						style_radius="4"
+						style_bg_color="0xff72b6"
+						style_border_width="0"
+					/>
+					<lv_obj
+						name="music_player_spectrum_bar_15"
+						x="180"
+						align="bottom_left"
+						width="8"
+						height="31"
+						style_radius="4"
+						style_bg_color="0xff72b6"
+						style_border_width="0"
+					/>
+					<lv_obj
+						name="music_player_spectrum_bar_16"
+						x="192"
+						align="bottom_left"
+						width="8"
+						height="43"
+						style_radius="4"
+						style_bg_color="0xff72b6"
+						style_border_width="0"
+					/>
+					<lv_obj
+						name="music_player_spectrum_bar_17"
+						x="204"
+						align="bottom_left"
+						width="8"
+						height="22"
+						style_radius="4"
+						style_bg_color="0xff72b6"
+						style_border_width="0"
+					/>
+				</lv_obj>
+			</lv_obj>
+
+			<!-- 第 4 页, 默认收起, 播放控制选项 -->
+			<lv_obj
+				name="music_player_page_controls"
+				x="0"
+				y="0"
+				width="100%"
+				height="100%"
+				style_pad_all="0"
+				style_bg_color="0x080b16"
+				style_bg_opa="24%"
+				style_border_width="0"
+			>
+				<lv_label
+					name="music_player_controls_title"
+					text="设置"
+					align="top_mid"
+					y="8"
+					width="220"
+					long_mode="dots"
+					style_text_align="center"
+					style_text_color="0xffffff"
+				/>
+
+				<lv_button name="music_player_control_volume" x="14" y="50" width="102" height="76" scrollable="false">
+					<style name="style_launcher_tile" />
+					<style name="style_launcher_tile_focused" selector="focused" />
+					<lv_image src="volume_high" align="top_mid" y="7" />
+					<lv_label text="音量设置" align="bottom_mid" y="-8" style_text_color="0xffffff" />
+				</lv_button>
+				<lv_button name="music_player_control_repeat" x="124" y="50" width="102" height="76" scrollable="false">
+					<style name="style_launcher_tile" />
+					<style name="style_launcher_tile_focused" selector="focused" />
+					<lv_image name="music_player_control_repeat_icon" src="repeat" align="top_mid" y="7" />
+					<lv_label text="播放模式" align="bottom_mid" y="-8" style_text_color="0xffffff" />
+				</lv_button>
+				<lv_button
+					name="music_player_control_playlist"
+					x="14"
+					y="134"
+					width="102"
+					height="76"
+					scrollable="false"
+				>
+					<style name="style_launcher_tile" />
+					<style name="style_launcher_tile_focused" selector="focused" />
+					<lv_image src="playlist" align="top_mid" y="7" />
+					<lv_label text="播放列表" align="bottom_mid" y="-8" style_text_color="0xffffff" />
+				</lv_button>
+				<lv_button name="music_player_control_close" x="124" y="134" width="102" height="76" scrollable="false">
+					<style name="style_launcher_tile" />
+					<style name="style_launcher_tile_focused" selector="focused" />
+					<lv_image src="power" align="top_mid" y="7" />
+					<lv_label text="关闭播放器" align="bottom_mid" y="-8" style_text_color="0xffffff" />
+				</lv_button>
+			</lv_obj>
+		</lv_obj>
+
+		<!-- 页提示固定在屏幕底部, 不随分页内容变化 -->
+		<lv_obj
+			name="music_player_page_indicator"
+			align="bottom_mid"
+			y="-4"
+			width="60"
+			height="6"
+			scrollable="false"
+			scrollbar_mode="off"
+			style_pad_all="0"
+			style_bg_opa="0"
+			style_border_width="0"
+		>
+			<lv_obj name="music_player_page_dot_0" x="0" y="0">
+				<style name="style_page_dot" />
+			</lv_obj>
+			<lv_obj name="music_player_page_dot_1" x="16" y="0">
+				<style name="style_page_dot" />
+			</lv_obj>
+			<lv_obj name="music_player_page_dot_2" x="32" y="0">
+				<style name="style_page_dot" />
+			</lv_obj>
+			<lv_obj name="music_player_page_dot_3" x="48" y="0">
+				<style name="style_page_dot" />
+			</lv_obj>
+		</lv_obj>
+	</view>
+</screen>

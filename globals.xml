@@ -17,6 +17,9 @@
 		<data name="ahq" color_format="rgb565" src_path="images/backgrounds/ahq.png" />
 		<data name="bochi" color_format="rgb565" src_path="images/backgrounds/bochi.png" />
 
+		<!-- 默认封面(112x112), 无内嵌封面时使用 -->
+		<data name="song" color_format="rgb565" src_path="images/covers/song.png" />
+
 		<!-- 图标图片（30x30） -->
 		<data name="mute" color_format="rgb565a8" src_path="images/icons/mute-30.png" />
 		<data name="next" color_format="rgb565a8" src_path="images/icons/next-30.png" />
@@ -46,15 +49,27 @@
 		<data name="app_system_monitor" color_format="rgb565a8" src_path="images/apps/app-system-monitor.png" />
 
 		<!-- 设置应用列表图标 -->
+		<data name="setting_wifi" color_format="rgb565a8" src_path="images/settings/setting-wifi.png" />
 		<data name="setting_brightness" color_format="rgb565a8" src_path="images/settings/setting-brightness.png" />
 		<data name="setting_orientation" color_format="rgb565a8" src_path="images/settings/setting-orientation.png" />
 		<data name="setting_reboot" color_format="rgb565a8" src_path="images/settings/setting-reboot.png" />
 		<data name="setting_local_update" color_format="rgb565a8" src_path="images/settings/setting-local-update.png" />
 		<data name="setting_about" color_format="rgb565a8" src_path="images/settings/setting-about.png" />
+		<data name="setting_default" color_format="rgb565a8" src_path="images/settings/setting-default.png" />
 	</images>
 
 	<fonts>
-		<!-- 主页面时钟只需要数字与冒号；单独烘焙子集，避免引入整套 44px CJK 字库。 -->
+		<!-- 播放器时间文本, 仅数字/冒号/空格/连字符 -->
+		<bin
+			name="time_14"
+			src_path="fonts/SourceHanSansCN-Regular.ttf"
+			size="14"
+			bpp="4"
+			range="0x20,0x2D,0x30-0x3A"
+			as_file="false"
+		/>
+
+		<!-- 主页面时钟字体，仅数字/冒号 -->
 		<bin
 			name="home_time_44"
 			src_path="fonts/SourceHanSansCN-Regular.ttf"
@@ -63,16 +78,20 @@
 			range="0x30-0x3A"
 			as_file="false"
 		/>
+
+		<!-- 全局字体，中文 -->
 		<bin
-			name="cjk_sc_14"
+			name="cjk_sc_16"
 			src_path="fonts/SourceHanSansCN-Regular.ttf"
-			size="14"
+			size="16"
 			bpp="2"
 			range="0x20-0x7F,0xA0-0xFF,0x2000-0x206F,0x2100-0x214F,0x2190-0x21FF,0x2200-0x22FF,0x3000-0x303F,0x3040-0x30FF,0x4E00-0x9FFF,0xFF00-0xFFEF"
 			as_file="false"
 		/>
+
+		<!-- 全局字体，日文 -->
 		<bin
-			name="cjk_jp_14"
+			name="cjk_jp_16"
 			src_path="fonts/NotoSansJP-Regular.ttf"
 			size="14"
 			bpp="2"
@@ -85,7 +104,6 @@
 		<!-- 应用选择器磁贴的公共外观 -->
 		<style
 			name="style_launcher_tile"
-			help="应用选择器磁贴：深色半透明圆角块 + 浅灰描边"
 			radius="16"
 			bg_color="0x111827"
 			bg_opa="65%"
@@ -93,17 +111,9 @@
 			border_color="0xe5e7eb"
 			border_opa="40%"
 		/>
-		<!-- 磁贴聚焦态：粉色外描边 + 光晕 -->
-		<style
-			name="style_launcher_tile_focused"
-			help="应用选择器磁贴选中态：粉色描边与光晕"
-			outline_width="3"
-			outline_color="0xff72b6"
-			outline_opa="100%"
-			shadow_width="10"
-			shadow_color="0xff4fa3"
-			shadow_opa="60%"
-		/>
+
+		<!-- 磁贴聚焦态 -->
+		<style name="style_launcher_tile_focused" outline_width="0" shadow_width="0" />
 
 		<!-- 设置列表项：焦点态只改变背景与左侧强调色，适合旋钮逐项浏览。 -->
 		<style
@@ -115,12 +125,55 @@
 			pad_left="10"
 			pad_right="10"
 		/>
+
+		<!-- 聚焦态只保留底色高亮, 描边由滑动焦点框绘制 -->
+		<style name="style_settings_row_focused" bg_color="0x29212a" outline_width="0" />
+
+		<!-- 播放器可聚焦组件：描边改由滑动焦点框绘制 -->
+		<style name="style_mp_widget_focused" outline_width="0" />
+
+		<!-- 播放器整页焦点态：描边改由滑动焦点框绘制 -->
+		<style name="style_mp_page_focused" border_width="0" />
+
+		<!-- 分页提示点：默认态，小尺寸半透明白点（播放器与启动器共用） -->
 		<style
-			name="style_settings_row_focused"
-			bg_color="0x29212a"
-			outline_width="2"
-			outline_color="0xff72b6"
-			outline_opa="100%"
+			name="style_page_dot"
+			width="6"
+			height="6"
+			radius="3"
+			bg_color="0xffffff"
+			bg_opa="55%"
+			border_width="0"
 		/>
+
+		<!-- 分页提示点：当前页态，加宽粉色点（播放器与启动器共用） -->
+		<style
+			name="style_page_dot_active"
+			width="12"
+			height="6"
+			radius="3"
+			bg_color="0xff72b6"
+			bg_opa="100%"
+			border_width="0"
+		/>
+
+		<!-- 系统监视器内容框：默认态, 圆角深色底 + 粉色细描边 -->
+		<style
+			name="style_sysmon_frame"
+			radius="10"
+			bg_color="0x111827"
+			bg_opa="100%"
+			border_width="1"
+			border_color="0xff72b6"
+		/>
+
+		<!-- 系统监视器内容框：进入操作态, 描边加粗, 由控制器动态叠加/移除 -->
+		<style name="style_sysmon_frame_active" border_width="2" />
+
+		<!-- 文件浏览列表行：默认态透明圆角 -->
+		<style name="style_browser_row" radius="5" bg_opa="0" />
+
+		<!-- 文件浏览列表行：聚焦态保留底色高亮, 描边由滑动焦点框绘制 -->
+		<style name="style_browser_row_focused" bg_color="0x171717" bg_opa="100%" border_width="0" />
 	</styles>
 </globals>

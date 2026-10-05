@@ -27,6 +27,11 @@ endif()
 # LVGL version to fetch (any git tag or branch from https://github.com/lvgl/lvgl)
 set(LVGL_VERSION "v9.5.0" CACHE STRING "LVGL version (git tag or branch)")
 
+# LVGL git repository; override on the command line when GitHub is slow, e.g.
+# -DLVGL_GIT_REPOSITORY=https://ghfast.top/https://github.com/lvgl/lvgl.git
+set(LVGL_GIT_REPOSITORY "https://github.com/lvgl/lvgl.git"
+    CACHE STRING "LVGL git repository URL (mirror allowed)")
+
 # Folder with the UI exported from LVGL Pro (the parent of this sim/ folder).
 set(UI_DIR "${CMAKE_CURRENT_SOURCE_DIR}/.." CACHE PATH "Folder with the exported UI")
 
@@ -34,6 +39,12 @@ set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}/bin")
+
+# 项目源文件/桩文件均为无 BOM 的 UTF-8(含中文注释与字符串), MSVC 默认按系统
+# 代码页(GBK/936)解析会吞掉换行导致连锁语法错误, 全局指定源与执行字符集
+if(MSVC)
+	add_compile_options(/utf-8)
+endif()
 
 # ---------------------------------------------------------------------------
 #  Fetch LVGL
@@ -45,7 +56,7 @@ if(POLICY CMP0169)
 endif()
 FetchContent_Declare(
   lvgl
-  GIT_REPOSITORY https://github.com/lvgl/lvgl.git
+  GIT_REPOSITORY ${LVGL_GIT_REPOSITORY}
   GIT_TAG ${LVGL_VERSION}
   GIT_SHALLOW TRUE)
 
@@ -134,6 +145,16 @@ add_subdirectory(${UI_DIR} ${CMAKE_BINARY_DIR}/ui)
 # The generated UI C uses `#include "lvgl.h"` style includes when this is
 # defined, matching the fetched LVGL target's include directories.
 target_compile_definitions(lib-ui PUBLIC LV_LVGL_H_INCLUDE_SIMPLE)
+
+# User sources are compiled in the lib-ui_user object library, which does not
+# inherit lib-ui's compile definitions; give it the same include style so the
+# shared UI_src headers pick `#include "lvgl.h"` too. LV_EDITOR_PREVIEW matches
+# the LVGL Pro preview build flag, letting UI code enable simulator-only
+# effects (e.g. software background blur) without touching firmware builds.
+if(TARGET lib-ui_user)
+  target_compile_definitions(lib-ui_user PUBLIC LV_LVGL_H_INCLUDE_SIMPLE
+                                                LV_EDITOR_PREVIEW=1)
+endif()
 
 # Derive the UI entry point and window size from the exported project.xml so the
 # simulator stays generic: the library header is "<name>.h" and its init

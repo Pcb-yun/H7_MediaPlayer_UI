@@ -1,7 +1,7 @@
 <!-- home.xml - 背景主页面：时间、日期与 Wi-Fi 状态。透明全屏按钮承接旋钮短按。 -->
 <screen>
 	<view
-		style_text_font="cjk_sc_14"
+		style_text_font="cjk_sc_16"
 		style_pad_all="0"
 		style_bg_color="0xffffff"
 		style_bg_opa="100%"
@@ -29,7 +29,7 @@
 			y="66"
 			width="132"
 			height="20"
-			style_text_font="cjk_sc_14"
+			style_text_font="cjk_sc_16"
 			style_text_color="0xffffff"
 			style_text_opa="95%"
 		/>
@@ -63,7 +63,7 @@
 				inner_align="contain"
 				style_image_opa="100%"
 			/>
-			<lv_label name="home_wifi_state" text="已关闭" style_text_font="cjk_sc_14" style_text_color="0xffffff" />
+			<lv_label name="home_wifi_state" text="已关闭" style_text_font="cjk_sc_16" style_text_color="0xffffff" />
 		</lv_obj>
 
 		<!-- 保留可聚焦按钮，确保编码器点按能进入应用选择器。所有视觉属性均透明。 -->

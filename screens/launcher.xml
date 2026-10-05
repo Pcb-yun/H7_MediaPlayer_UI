@@ -1,7 +1,8 @@
-<!-- launcher.xml - 2x2 应用选择器。页面结构、磁贴、图标和焦点样式全部由 XML 管理。 -->
+<!-- launcher.xml - 应用选择器（每页 2 列网格）。磁贴用 launcher_tile 组件描述；
+     页面数与每页应用数由 C 侧按应用总数计算，增删应用时同步增删本文件的磁贴与分页点即可。 -->
 <screen>
 	<view
-		style_text_font="cjk_sc_14"
+		style_text_font="cjk_sc_16"
 		style_pad_all="0"
 		style_bg_color="0x000000"
 		style_bg_opa="100%"
@@ -18,64 +19,62 @@
 			style_border_width="0"
 		/>
 
-		<!-- 第一页：设置、音乐、文件、图片。磁贴外观（含聚焦态）来自 globals.xml 的 style_launcher_tile* -->
-		<lv_obj name="launcher_page_0" width="100%" height="100%" style_pad_all="0" style_bg_opa="0" style_border_width="0">
-			<lv_button name="launcher_tile_0" x="16" y="14" width="92" height="92">
-				<style name="style_launcher_tile"/>
-				<style name="style_launcher_tile_focused" selector="focused"/>
-				<lv_image src="app_settings" width="48" height="48" inner_align="contain" align="top_mid" y="8" />
-				<lv_label text="设置" width="100%" align="bottom_mid" y="-7" style_text_align="center" style_text_font="cjk_sc_14" style_text_color="0xffffff" />
-			</lv_button>
-			<lv_button name="launcher_tile_1" x="132" y="14" width="92" height="92">
-				<style name="style_launcher_tile"/>
-				<style name="style_launcher_tile_focused" selector="focused"/>
-				<lv_image src="app_music" width="48" height="48" inner_align="contain" align="top_mid" y="8" />
-				<lv_label text="音乐" width="100%" align="bottom_mid" y="-7" style_text_align="center" style_text_font="cjk_sc_14" style_text_color="0xffffff" />
-			</lv_button>
-			<lv_button name="launcher_tile_2" x="16" y="116" width="92" height="92">
-				<style name="style_launcher_tile"/>
-				<style name="style_launcher_tile_focused" selector="focused"/>
-				<lv_image src="app_files" width="48" height="48" inner_align="contain" align="top_mid" y="8" />
-				<lv_label text="文件" width="100%" align="bottom_mid" y="-7" style_text_align="center" style_text_font="cjk_sc_14" style_text_color="0xffffff" />
-			</lv_button>
-			<lv_button name="launcher_tile_3" x="132" y="116" width="92" height="92">
-				<style name="style_launcher_tile"/>
-				<style name="style_launcher_tile_focused" selector="focused"/>
-				<lv_image src="app_photos" width="48" height="48" inner_align="contain" align="top_mid" y="8" />
-				<lv_label text="图片" width="100%" align="bottom_mid" y="-7" style_text_align="center" style_text_font="cjk_sc_14" style_text_color="0xffffff" />
-			</lv_button>
+		<!-- 第一页：设置、音乐、文件、图片。2 列网格，间距 24/10，左右留边 16。 -->
+		<lv_obj
+			name="launcher_page_0"
+			width="100%"
+			height="100%"
+			flex_flow="row_wrap"
+			style_pad_left="16"
+			style_pad_right="16"
+			style_pad_top="14"
+			style_pad_column="24"
+			style_pad_row="10"
+			style_bg_opa="0"
+			style_border_width="0"
+		>
+			<launcher_tile name="launcher_tile_0" icon="app_settings" label="设置" />
+			<launcher_tile name="launcher_tile_1" icon="app_music" label="音乐" />
+			<launcher_tile name="launcher_tile_2" icon="app_files" label="文件" />
+			<launcher_tile name="launcher_tile_3" icon="app_photos" label="图片" />
 		</lv_obj>
 
-		<!-- 第二页：视频、相机、系统监视器。初始可见性由 C 侧 update_page() 设置，XML 不写 hidden（见 player.xml 注释） -->
-		<lv_obj name="launcher_page_1" width="100%" height="100%" style_pad_all="0" style_bg_opa="0" style_border_width="0">
-			<lv_button name="launcher_tile_4" x="16" y="14" width="92" height="92">
-				<style name="style_launcher_tile"/>
-				<style name="style_launcher_tile_focused" selector="focused"/>
-				<lv_image src="app_video" width="48" height="48" inner_align="contain" align="top_mid" y="8" />
-				<lv_label text="视频" width="100%" align="bottom_mid" y="-7" style_text_align="center" style_text_font="cjk_sc_14" style_text_color="0xffffff" />
-			</lv_button>
-			<lv_button name="launcher_tile_5" x="132" y="14" width="92" height="92">
-				<style name="style_launcher_tile"/>
-				<style name="style_launcher_tile_focused" selector="focused"/>
-				<lv_image src="app_camera" width="48" height="48" inner_align="contain" align="top_mid" y="8" />
-				<lv_label text="相机" width="100%" align="bottom_mid" y="-7" style_text_align="center" style_text_font="cjk_sc_14" style_text_color="0xffffff" />
-			</lv_button>
-			<lv_button name="launcher_tile_6" x="16" y="116" width="92" height="92">
-				<style name="style_launcher_tile"/>
-				<style name="style_launcher_tile_focused" selector="focused"/>
-				<lv_image src="app_system_monitor" width="48" height="48" inner_align="contain" align="top_mid" y="8" />
-				<lv_label text="监视器" width="100%" align="bottom_mid" y="-7" style_text_align="center" style_text_font="cjk_sc_14" style_text_color="0xffffff" />
-			</lv_button>
+		<!-- 第二页：视频、相机、系统监视器。初始可见性由 C 侧 page_update() 设置，XML 不写 hidden。 -->
+		<lv_obj
+			name="launcher_page_1"
+			width="100%"
+			height="100%"
+			flex_flow="row_wrap"
+			style_pad_left="16"
+			style_pad_right="16"
+			style_pad_top="14"
+			style_pad_column="24"
+			style_pad_row="10"
+			style_bg_opa="0"
+			style_border_width="0"
+		>
+			<launcher_tile name="launcher_tile_4" icon="app_video" label="视频" />
+			<launcher_tile name="launcher_tile_5" icon="app_camera" label="相机" />
+			<launcher_tile name="launcher_tile_6" icon="app_system_monitor" label="监视器" />
 		</lv_obj>
 
-		<!-- 两套页码指示器由 C 只切换可见性，尺寸与颜色仍由 XML 定义。 -->
-		<lv_obj name="launcher_dots_page_0" align="bottom_mid" y="-8" width="26" height="6" style_pad_all="0" style_bg_opa="0" style_border_width="0">
-			<lv_obj x="0" y="0" width="12" height="6" style_radius="3" style_bg_color="0xffb2ce" style_bg_opa="100%" style_border_width="0" />
-			<lv_obj x="20" y="0" width="6" height="6" style_radius="3" style_bg_color="0xffffff" style_bg_opa="55%" style_border_width="0" />
-		</lv_obj>
-		<lv_obj name="launcher_dots_page_1" align="bottom_mid" y="-8" width="26" height="6" style_pad_all="0" style_bg_opa="0" style_border_width="0">
-			<lv_obj x="0" y="0" width="6" height="6" style_radius="3" style_bg_color="0xffffff" style_bg_opa="55%" style_border_width="0" />
-			<lv_obj x="14" y="0" width="12" height="6" style_radius="3" style_bg_color="0xffb2ce" style_bg_opa="100%" style_border_width="0" />
+		<!-- 分页指示：单容器 + 每页一个点，当前页由 C 侧切换样式。增加页面时在此追加一个 launcher_dot_N。 -->
+		<lv_obj
+			name="launcher_dots"
+			align="bottom_mid"
+			y="-8"
+			width="28"
+			height="6"
+			style_pad_all="0"
+			style_bg_opa="0"
+			style_border_width="0"
+		>
+			<lv_obj name="launcher_dot_0" x="0" y="0">
+				<style name="style_page_dot" />
+			</lv_obj>
+			<lv_obj name="launcher_dot_1" x="16" y="0">
+				<style name="style_page_dot" />
+			</lv_obj>
 		</lv_obj>
 	</view>
 </screen>

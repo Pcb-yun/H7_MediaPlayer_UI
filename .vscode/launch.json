@@ -5,7 +5,7 @@
       "type": "lldb",
       "request": "launch",
       "name": "Debug LVGL Simulator",
-      "program": "${workspaceFolder}/build/bin/lvgl_simulator",
+      "program": "${workspaceFolder}/build/bin/Debug/lvgl_simulator.exe",
       "args": [],
       "cwd": "${workspaceFolder}",
       "preLaunchTask": "CMake build"

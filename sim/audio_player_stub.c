@@ -27,8 +27,6 @@ const char *audio_res_str(audio_res_t result) {
 	return result == AUDIO_RES_OK ? "ok" : "preview has no audio backend";
 }
 
-audio_res_t audio_player_init(void) { return AUDIO_RES_OK; }
-
 audio_res_t audio_player_play(const char *path) {
 	(void)path;
 	s_snapshot.state = AUDIO_PLAYER_ERROR;
@@ -63,36 +61,30 @@ audio_res_t audio_player_set_repeat(audio_repeat_t repeat) {
 	return AUDIO_RES_OK;
 }
 
-audio_res_t audio_player_read_metadata(const char *path, audio_meta_t *meta) {
-	if (path == NULL || meta == NULL) return AUDIO_RES_INVALID_ARG;
-	memset(meta, 0, sizeof(*meta));
-	return AUDIO_RES_UNSUPPORTED_FORMAT;
-}
-
 audio_res_t audio_player_snapshot(audio_player_snapshot_t *snapshot) {
 	if (snapshot == NULL) return AUDIO_RES_INVALID_ARG;
 	*snapshot = s_snapshot;
 	return AUDIO_RES_OK;
 }
 
-bool audio_player_supports(const char *path) {
-	static const char *extensions[] = {"wav", "mp3", "flac"};
-	const char *dot = NULL, *cursor;
-	uint32_t i;
-	if (path == NULL) return false;
-	for (cursor = path; *cursor != '\0'; cursor++) if (*cursor == '.') dot = cursor;
-	if (dot == NULL) return false;
-	dot++;
-	for (i = 0; i < sizeof(extensions) / sizeof(extensions[0]); i++) {
-		const char *left = dot, *right = extensions[i];
-		while (*left != '\0' && *right != '\0') {
-			char value = (*left >= 'A' && *left <= 'Z') ? (char)(*left + 32) : *left;
-			if (value != *right) break;
-			left++; right++;
-		}
-		if (*left == '\0' && *right == '\0') return true;
-	}
-	return false;
+bool audio_player_cover_path(char *path, size_t size) {
+	(void)path;
+	(void)size;
+	return false;	// 预览器无内嵌封面, 界面始终使用默认封面
+}
+
+uint32_t audio_player_lyric_get(uint32_t position_ms, uint32_t before,
+	uint32_t after, audio_lyric_line_t *lines, uint32_t capacity,
+	uint32_t *current_index) {
+	(void)position_ms;
+	(void)after;
+	if(lines == NULL || capacity == 0u) return 0u;
+
+	/* 预览器只有一条演示歌词, 固定放在当前行位置供窗口接口展示 */
+	if(before >= capacity) before = capacity - 1u;
+	lines[before] = s_snapshot.lyric;
+	if(current_index != NULL) *current_index = before;
+	return before + 1u;
 }
 
 #endif

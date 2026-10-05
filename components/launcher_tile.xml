@@ -1,0 +1,13 @@
+<!-- 应用启动器磁贴：图标 + 名称。外观与聚焦态来自 globals 的 style_launcher_tile*。 -->
+<component>
+	<api>
+		<prop name="icon" type="image" default="NULL" />
+		<prop name="label" type="string" default="应用" />
+	</api>
+	<view extends="lv_button" width="92" height="92">
+		<style name="style_launcher_tile" />
+		<style name="style_launcher_tile_focused" selector="focused" />
+		<lv_image src="$icon" width="48" height="48" inner_align="contain" align="top_mid" y="8" />
+		<lv_label text="$label" width="100%" align="bottom_mid" y="-7" style_text_align="center" style_text_font="cjk_sc_16" style_text_color="0xffffff" />
+	</view>
+</component>

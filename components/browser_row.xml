@@ -1,0 +1,20 @@
+<!-- 文件浏览列表行：类型图标 + 文件名。外观与聚焦态来自 globals 的 style_browser_row*。 -->
+<component>
+	<api>
+		<prop name="icon" type="string" default="" />
+		<prop name="label" type="string" default="" />
+	</api>
+	<view
+		extends="lv_button"
+		width="100%"
+		flex_flow="row"
+		style_text_font="cjk_sc_16"
+		style_pad_all="5"
+		style_pad_column="7"
+	>
+		<style name="style_browser_row" />
+		<style name="style_browser_row_focused" selector="focused" />
+		<lv_label name="row_icon" text="$icon" />
+		<lv_label name="row_name" text="$label" flex_grow="1" long_mode="dots" />
+	</view>
+</component>

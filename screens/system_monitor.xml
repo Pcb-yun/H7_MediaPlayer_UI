@@ -1,6 +1,6 @@
 <!-- 系统监视器：外层旋钮切换大项；点按进入后，才滚动文本或在内部信息框间移动。 -->
 <screen>
-	<view style_text_font="cjk_sc_14" style_pad_all="0" style_bg_color="0x080808" style_bg_opa="100%">
+	<view style_text_font="cjk_sc_16" style_pad_all="0" style_bg_color="0x080808" style_bg_opa="100%">
 		<page_header name="sysmon_header" x="0" y="0" title="系统监视" />
 		<lv_obj
 			name="sysmon_page"
@@ -9,6 +9,7 @@
 			width="100%"
 			height="206"
 			flex_flow="column"
+			scrollable="false"
 			style_pad_left="8"
 			style_pad_right="8"
 			style_pad_top="6"
@@ -34,12 +35,12 @@
 					x="10"
 					align="left_mid"
 					text="基础信息"
-					style_text_font="cjk_sc_14"
+					style_text_font="cjk_sc_16"
 					style_text_color="0xf3f4f6"
 				/>
 			</lv_obj>
 
-			<!-- 大项内容区：外层聚焦后点按进入；项目页的小信息框由控制器动态复用。 -->
+			<!-- 大项内容区：文本页显示内容标签, 列表页由控制器按需实例化信息行。 -->
 			<lv_obj
 				name="sysmon_page_body"
 				width="100%"
@@ -50,22 +51,20 @@
 				style_pad_top="8"
 				style_pad_bottom="8"
 				style_pad_row="4"
-				style_radius="10"
-				style_bg_color="0x111827"
-				style_bg_opa="100%"
-				style_border_width="1"
-				style_border_color="0xff72b6"
 			>
+				<style name="style_sysmon_frame" />
 				<lv_label
 					name="sysmon_page_text"
 					width="100%"
 					height="content"
 					text="--"
 					long_mode="wrap"
-					style_text_font="cjk_sc_14"
+					style_text_font="cjk_sc_16"
 					style_text_color="0xe5e7eb"
 					style_text_line_space="3"
 				/>
+
+				<!-- 信息行由控制器按需实例化并复用, 行外观由 info_row 组件定义。 -->
 			</lv_obj>
 		</lv_obj>
 	</view>
